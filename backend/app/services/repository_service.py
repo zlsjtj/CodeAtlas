@@ -36,6 +36,22 @@ class RepositoryService:
             raise RepositoryValidationError("The repository root_path is missing or is no longer a directory.")
         return root
 
+    def resolve_relative_path(self, repository: Repository, relative_path: str) -> Path:
+        root = self.resolve_local_root(repository)
+        normalized = relative_path.strip().strip("/")
+        if not normalized:
+            raise RepositoryValidationError("A repository-relative path is required.")
+
+        target = (root / normalized).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as exc:
+            raise RepositoryValidationError("The requested path must stay inside the repository root.") from exc
+
+        if not target.exists():
+            raise RepositoryValidationError("The requested repository path does not exist.")
+        return target
+
     def create_repository(self, payload: RepositoryCreate) -> Repository:
         root_path: str | None = None
         source_url = str(payload.source_url) if payload.source_url else None

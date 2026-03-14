@@ -3,11 +3,11 @@ export function ChatPanel() {
     <section className="panel-card">
       <h2 className="panel-title">问答主链路预留</h2>
       <p className="panel-copy">
-        第一阶段不接复杂 Agent 逻辑，但前端已经把问答区位置留好。第二阶段开始，这里会逐步接入检索、文件阅读、符号定位和引用展示。
+        现在后端工具层已经具备基础能力，下一阶段会把这些工具接到 Agent 上，让模型先检索、再读取局部上下文、最后给出带引用的回答。
       </p>
       <div className="placeholder-list">
         <div className="placeholder-card">
-          <h3 className="placeholder-title">Planned tools</h3>
+          <h3 className="placeholder-title">Available tools</h3>
           <div className="placeholder-copy inline-code">list_repo_tree / search_repo / read_file / find_symbol</div>
         </div>
         <div className="placeholder-card">
@@ -18,4 +18,3 @@ export function ChatPanel() {
     </section>
   );
 }
-

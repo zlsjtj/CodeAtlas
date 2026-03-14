@@ -1,2 +1,1 @@
-"""Future home for agent-facing tools such as search/read/symbol."""
-
+"""Agent-facing repository tools."""

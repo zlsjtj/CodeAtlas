@@ -27,6 +27,9 @@ def get_meta() -> MetaResponse:
             "repository_import",
             "repository_tree",
             "basic_chunk_indexing",
+            "search_repo",
+            "read_file",
+            "find_symbol",
             "frontend_workspace",
         ],
     )

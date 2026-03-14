@@ -113,10 +113,10 @@ export function WorkspaceShell() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <p className="eyebrow">Stage 2 MVP</p>
+        <p className="eyebrow">Stage 3 MVP</p>
         <h1 className="hero-title">代码库问答与改动助手</h1>
         <p className="hero-copy">
-          当前阶段已经能登记仓库、查看健康状态并触发基础索引。后端会扫描文本文件、过滤常见无关目录和二进制文件，再把代码切成可追踪的行段 chunk，为后续检索和 Agent 工具调用打基础。
+          当前阶段已经能登记仓库、建立基础索引，并通过统一工具接口执行目录树查询、关键词检索、按行读文件和符号定位。后续会在这层工具之上接入 OpenAI Agents SDK 问答主流程。
         </p>
         <div className="hero-grid">
           <div className="hero-stat">
@@ -129,7 +129,7 @@ export function WorkspaceShell() {
           </div>
           <div className="hero-stat">
             <div className="hero-stat-label">Reserved Modules</div>
-            <div className="hero-stat-value">agents / tools online next</div>
+            <div className="hero-stat-value">agent / patch / checks</div>
           </div>
         </div>
       </section>

@@ -1,9 +1,10 @@
 # 代码库问答与改动助手（AI Agent）
 
-面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已完成前两阶段的最小可运行版本：
+面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已完成前三阶段中的前两层核心基础，并已把第一批代码工具接起来：
 
 - 第一阶段：项目骨架、FastAPI、Next.js、SQLite schema、健康检查、仓库导入
 - 第二阶段：本地仓库扫描、文件树接口、基础 chunk 索引、索引状态与调试查询
+- 第三阶段：`list_repo_tree`、`search_repo`、`read_file`、`find_symbol` 工具与统一返回结构
 
 项目目标不是做一个“会聊天的网页”，而是做一个“能围绕代码任务调用工具、引用证据、逐步扩展到改动建议和检查闭环”的代码助手。
 
@@ -19,14 +20,14 @@
 - 查询索引状态
 - 查询部分 chunk，便于调试下一阶段检索工具
 - 在前端工作台直接触发索引
+- 通过统一工具接口执行目录树、关键词检索、按行读文件和符号定位
 
 当前仍未实现：
 
 - GitHub 仓库克隆
-- 关键词检索 / 语义检索
-- `read_file` / `find_symbol`
 - OpenAI Agents SDK 问答主流程
 - patch 草案、diff 预览、lint/test 闭环
+- 语义检索、rerank 和 AST 级符号定位增强
 
 ## 项目目录
 
@@ -181,6 +182,36 @@
 - `GET /api/repositories/{repo_id}/index-status`
 - `GET /api/repositories/{repo_id}/chunks`
 
+### 工具调试接口
+
+- `POST /api/tools/list-tree`
+- `POST /api/tools/search`
+- `POST /api/tools/read`
+- `POST /api/tools/find-symbol`
+
+这些接口共用统一的返回结构：
+
+```json
+{
+  "tool_name": "search_repo",
+  "repo_id": 1,
+  "items": [
+    {
+      "kind": "search_match",
+      "path": "src/service.py",
+      "start_line": 5,
+      "end_line": 10,
+      "language": "python",
+      "content": "def fetch_user(user_id: int): ...",
+      "score": 3.5
+    }
+  ],
+  "truncated": false,
+  "total_matches": 1,
+  "summary": "Found 1 indexed chunk matches for query 'fetch_user'."
+}
+```
+
 ## 索引策略
 
 第二阶段采用最稳妥、最简单的可工作方案：
@@ -252,7 +283,35 @@ npm run dev
 3. 调用 `GET /api/repositories/{repo_id}/index-status`
 4. 调用 `GET /api/repositories/{repo_id}/tree?depth=2`
 5. 调用 `GET /api/repositories/{repo_id}/chunks?limit=10`
-6. 打开前端首页，点击“触发索引”，确认能看到成功提示
+6. 调用工具调试接口，例如：
+
+```json
+POST /api/tools/search
+{
+  "repo_id": 1,
+  "query": "request_index"
+}
+```
+
+```json
+POST /api/tools/read
+{
+  "repo_id": 1,
+  "path": "backend/app/api/routes/repositories.py",
+  "start_line": 1,
+  "end_line": 40
+}
+```
+
+```json
+POST /api/tools/find-symbol
+{
+  "repo_id": 1,
+  "name": "request_index"
+}
+```
+
+7. 打开前端首页，点击“触发索引”，确认能看到成功提示
 
 ## 测试
 
@@ -269,6 +328,7 @@ python -m pytest
 - 仓库创建与列表
 - 文件树过滤
 - 索引写入与状态查询
+- 工具接口：目录树、检索、读文件、找符号
 
 ## 设计取舍
 
@@ -284,11 +344,10 @@ python -m pytest
 
 ## 下一阶段
 
-第三阶段建议优先实现：
+下一阶段建议优先实现：
 
-1. `search_repo`
-2. `read_file`
-3. `find_symbol`
-4. 统一工具返回结构
-5. 为 OpenAI Agents SDK 问答主流程准备工具层
-
+1. 接入 OpenAI Agents SDK
+2. 让 Agent 自主调用 `list_repo_tree` / `search_repo` / `read_file` / `find_symbol`
+3. 输出带路径和行号的 citations
+4. 记录 `ConversationTrace`
+5. 为 benchmark 和 trace 评测预留接口
