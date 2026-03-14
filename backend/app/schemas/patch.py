@@ -20,9 +20,7 @@ class PatchDraftTraceSummary(BaseModel):
     latency_ms: int
 
 
-class PatchDraftResponse(BaseModel):
-    session_id: str
-    repo_id: int
+class PatchDraftFile(BaseModel):
     target_path: str
     base_content_sha256: str
     summary: str
@@ -33,6 +31,33 @@ class PatchDraftResponse(BaseModel):
     line_count_delta: int
     unified_diff: str
     proposed_content: str
+    trace_summary: PatchDraftTraceSummary
+
+
+class PatchDraftResponse(PatchDraftFile):
+    session_id: str
+    repo_id: int
+
+
+class PatchBatchDraftRequest(BaseModel):
+    repo_id: int
+    target_paths: list[str] = Field(min_length=1)
+    instruction: str = Field(min_length=1)
+    session_id: str | None = None
+
+
+class PatchBatchDraftResponse(BaseModel):
+    session_id: str
+    repo_id: int
+    target_paths: list[str]
+    summary: str
+    warnings: list[str] = Field(default_factory=list)
+    changed_file_count: int
+    total_original_line_count: int
+    total_proposed_line_count: int
+    total_line_count_delta: int
+    combined_unified_diff: str
+    items: list[PatchDraftFile]
     trace_summary: PatchDraftTraceSummary
 
 

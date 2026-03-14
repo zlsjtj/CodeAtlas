@@ -1,6 +1,6 @@
 # 代码库问答与改动助手（AI Agent）
 
-面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已经完成前十阶段中的前九层核心能力，并把工作台继续推进到了“能根据改动范围推荐更合适的 checks 组合”：
+面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已经推进到第十一阶段，并把工作台继续扩展到了“支持多文件 patch 草案分组预览”：
 
 - 第一阶段：项目骨架、FastAPI、Next.js、SQLite schema、健康检查、仓库导入
 - 第二阶段：本地仓库扫描、文件树接口、基础 chunk 索引、索引状态与调试查询
@@ -12,6 +12,7 @@
 - 第八阶段：自动发现白名单检查项，支持运行 `pytest` / `npm run typecheck|lint|test` 并把结果返回到前端
 - 第九阶段：把 patch 应用与 checks 运行编排成一个一键闭环，减少手动切换和重复操作
 - 第十阶段：根据 patch 目标路径自动推荐 checks 组合，让 apply-and-verify 更贴近真实改动范围
+- 第十一阶段：支持多文件 patch 草案批量预览，按文件返回 grouped diff，并把推荐 checks 自动扩展到多路径改动
 
 项目目标不是做一个“会聊天的网页”，而是做一个“能围绕代码任务调用工具、引用证据、逐步扩展到改动建议和检查闭环”的代码助手。
 
@@ -32,6 +33,7 @@
 - 持久化问答 trace，包括工具调用摘要、引用和最终答案
 - 在前端页面内保留最近会话，支持切回历史回答继续查看引用
 - 生成单文件 patch 草案，并在前端直接预览 unified diff
+- 一次为多个目标文件生成 patch 草案预览，并按文件分组查看 diff
 - 把确认过的 patch 草案安全写回本地工作区，并避免覆盖已变化的文件
 - 自动发现并运行安全白名单内的 lint/test 检查，直接返回 stdout / stderr 摘要
 - 一键完成 patch 写回和默认 checks 验证，并把结果汇总回工作台
@@ -40,6 +42,7 @@
 当前仍未实现：
 
 - GitHub 仓库克隆
+- 多文件 patch 的直接写回与原子 apply-and-checks
 - 更细粒度地结合 diff 内容、语言和目录结构推荐 checks
 - 语义检索、rerank 和 AST 级符号定位增强
 - benchmark 样例、系统化评测和 trace 可视化
@@ -142,6 +145,7 @@
 - 问答区、引用区和 trace 摘要
 - 页面内最近会话历史切换
 - Patch 草案表单与 diff 预览
+- 多文件 patch 草案输入与 grouped diff 预览
 - Checks 面板与结果摘要
 - 一键应用并验证入口
 - 推荐 checks 展示与一键使用入口
@@ -250,6 +254,7 @@
 ### Patch 草案接口
 
 - `POST /api/patches/draft`
+- `POST /api/patches/draft-batch`
 - `POST /api/patches/apply`
 - `POST /api/patches/apply-and-checks`
 
@@ -298,10 +303,70 @@
 说明：
 
 - 当前 patch 草案只支持本地仓库
-- 当前 patch 草案只处理单个现有文本文件
+- `draft` 只处理单个现有文本文件
+- `draft-batch` 支持一次预览多个现有文本文件，默认上限 `5` 个文件
 - `draft` 返回的是预览结果，不会自动把文件写回工作区
+- `draft-batch` 当前只返回 grouped diff 预览，不会直接写回多个文件
 - `apply` 会在写入前校验 `base_content_sha256`，只有目标文件仍与草案基线一致时才会真正写入
+- 当前安全写回闭环仍保持单文件粒度，多文件 apply 还没有开放
 - 文件大小默认限制在 `500` 行、`20,000` 字符以内，优先保证草案稳定性
+
+`POST /api/patches/draft-batch` 请求示例：
+
+```json
+{
+  "repo_id": 1,
+  "target_paths": [
+    "backend/app/services/chat_service.py",
+    "frontend/components/checks/checks-panel.tsx"
+  ],
+  "instruction": "围绕这两个文件做最小必要改动，并给我分组 diff 预览。"
+}
+```
+
+返回结构：
+
+```json
+{
+  "session_id": "86f7...",
+  "repo_id": 1,
+  "target_paths": [
+    "backend/app/services/chat_service.py",
+    "frontend/components/checks/checks-panel.tsx"
+  ],
+  "summary": "Generated patch drafts for 2 file(s). Review the grouped diffs first, then apply any accepted changes one file at a time.",
+  "warnings": [],
+  "changed_file_count": 2,
+  "total_original_line_count": 180,
+  "total_proposed_line_count": 188,
+  "total_line_count_delta": 8,
+  "combined_unified_diff": "--- a/backend/app/services/chat_service.py\n+++ b/backend/app/services/chat_service.py\n@@ ...",
+  "items": [
+    {
+      "target_path": "backend/app/services/chat_service.py",
+      "base_content_sha256": "9a8c...",
+      "summary": "补强错误提示。",
+      "rationale": "只调整文案，不改动已有接口。",
+      "warnings": [],
+      "original_line_count": 98,
+      "proposed_line_count": 101,
+      "line_count_delta": 3,
+      "unified_diff": "--- a/backend/app/services/chat_service.py\n+++ b/backend/app/services/chat_service.py\n@@ ...",
+      "proposed_content": "...",
+      "trace_summary": {
+        "agent_name": "PatchDraftAssistant",
+        "model": "gpt-4.1-mini",
+        "latency_ms": 980
+      }
+    }
+  ],
+  "trace_summary": {
+    "agent_name": "PatchDraftAssistant",
+    "model": "gpt-4.1-mini",
+    "latency_ms": 1680
+  }
+}
+```
 
 `POST /api/patches/apply` 请求示例：
 
@@ -643,6 +708,7 @@ python -m pytest
 - 工具接口：目录树、检索、读文件、找符号
 - 问答接口：返回回答、引用，并写入 `ConversationTrace`
 - patch 草案接口：返回 unified diff 和完整草案内容
+- 多文件 patch 草案接口：返回 grouped diff 和逐文件草案内容
 - patch 应用接口：只在基线内容未变化时把草案写回工作区
 - checks 接口：发现并运行白名单 lint/test 命令，返回结果摘要
 - apply-and-checks 接口：把 patch 写回和检查执行串成一次请求
@@ -664,8 +730,8 @@ python -m pytest
 
 下一阶段建议优先实现：
 
-1. 结合 diff 内容和失败历史，进一步优化 checks 推荐准确度
-2. 增加 benchmark 样例与问答评测
-3. 引入更稳妥的检索策略，例如 embedding 和 rerank
-4. 支持多文件 patch 草案与分步确认
+1. 把多文件 patch 预览扩展成逐项确认和更稳妥的批量 apply 流程
+2. 结合 diff 内容和失败历史，进一步优化 checks 推荐准确度
+3. 增加 benchmark 样例与问答评测
+4. 引入更稳妥的检索策略，例如 embedding 和 rerank
 5. 再考虑 GitHub 自动克隆与后台任务队列

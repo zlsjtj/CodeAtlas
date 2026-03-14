@@ -61,6 +61,81 @@ def test_patch_draft_returns_unified_diff(client, tmp_path, monkeypatch):
     assert payload["trace_summary"]["agent_name"] == "PatchDraftAssistant"
 
 
+def test_patch_batch_draft_returns_grouped_file_previews(client, tmp_path, monkeypatch):
+    repository_dir = tmp_path / "patch-batch-repo"
+    repository_dir.mkdir()
+    (repository_dir / "service.py").write_text(
+        "\n".join(
+            [
+                "def greet(name: str) -> str:",
+                '    return "hello"',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (repository_dir / "config.py").write_text("FEATURE_FLAG = False\n", encoding="utf-8")
+
+    create_response = client.post(
+        "/api/repositories",
+        json={"source_type": "local", "root_path": str(repository_dir)},
+    )
+    repo_id = create_response.json()["id"]
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    async def fake_run_agent(self, *, prompt, model):
+        if "Target file: service.py" in prompt:
+            return (
+                PatchDraftFinalOutput(
+                    summary="让 greet 真正返回 name。",
+                    rationale="只改函数体，保持签名不变。",
+                    proposed_content=(
+                        "def greet(name: str) -> str:\n"
+                        '    return f"hello {name}"\n'
+                    ),
+                    warnings=[],
+                ),
+                "PatchDraftAssistant",
+            )
+
+        if "Target file: config.py" in prompt:
+            return (
+                PatchDraftFinalOutput(
+                    summary="打开功能开关。",
+                    rationale="配置项只做布尔切换，不引入额外结构。",
+                    proposed_content="FEATURE_FLAG = True\n",
+                    warnings=["请确认这个开关在目标环境中可安全开启。"],
+                ),
+                "PatchDraftAssistant",
+            )
+
+        raise AssertionError(f"Unexpected prompt: {prompt}")
+
+    monkeypatch.setattr(PatchService, "_run_agent", fake_run_agent)
+
+    response = client.post(
+        "/api/patches/draft-batch",
+        json={
+            "repo_id": repo_id,
+            "target_paths": ["service.py", "config.py", "service.py"],
+            "instruction": "给这两个文件都做最小必要改动。",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["target_paths"] == ["service.py", "config.py"]
+    assert payload["changed_file_count"] == 2
+    assert len(payload["items"]) == 2
+    assert payload["items"][0]["target_path"] == "service.py"
+    assert payload["items"][1]["target_path"] == "config.py"
+    assert "--- a/service.py" in payload["combined_unified_diff"]
+    assert "--- a/config.py" in payload["combined_unified_diff"]
+    assert any("Skipped duplicate target path" in warning for warning in payload["warnings"])
+    assert payload["trace_summary"]["agent_name"] == "PatchDraftAssistant"
+
+
 def test_patch_apply_writes_file_when_hash_matches(client, tmp_path):
     repository_dir = tmp_path / "apply-repo"
     repository_dir.mkdir()

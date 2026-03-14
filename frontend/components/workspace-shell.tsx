@@ -13,6 +13,7 @@ import {
   applyPatchAndRunChecks,
   applyPatchDraft,
   askRepositoryQuestion,
+  createPatchDraftBatch,
   createPatchDraft,
   createRepository,
   fetchCheckProfiles,
@@ -30,6 +31,7 @@ import type {
   ChatAskResponse,
   HealthResponse,
   MetaResponse,
+  PatchBatchDraftResponse,
   PatchApplyAndCheckResponse,
   PatchApplyResponse,
   PatchDraftResponse,
@@ -45,6 +47,7 @@ export function WorkspaceShell() {
   const [repositories, setRepositories] = useState<RepositoryRecord[]>([]);
   const [chatResponse, setChatResponse] = useState<ChatAskResponse | null>(null);
   const [patchResponse, setPatchResponse] = useState<PatchDraftResponse | null>(null);
+  const [patchBatchResponse, setPatchBatchResponse] = useState<PatchBatchDraftResponse | null>(null);
   const [patchApplyResponse, setPatchApplyResponse] = useState<PatchApplyResponse | null>(null);
   const [checkProfiles, setCheckProfiles] = useState<CheckProfile[]>([]);
   const [checkRecommendation, setCheckRecommendation] = useState<CheckRecommendationResponse | null>(null);
@@ -141,6 +144,12 @@ export function WorkspaceShell() {
       }
       return current.repo_id === selectedRepoId ? current : null;
     });
+    setPatchBatchResponse((current) => {
+      if (!current) {
+        return current;
+      }
+      return current.repo_id === selectedRepoId ? current : null;
+    });
     setPatchApplyResponse((current) => {
       if (!current) {
         return current;
@@ -203,11 +212,18 @@ export function WorkspaceShell() {
     let active = true;
 
     async function loadCheckRecommendation() {
+      const changedPaths =
+        patchBatchResponse && patchBatchResponse.repo_id === selectedRepository?.id
+          ? patchBatchResponse.target_paths
+          : patchResponse && patchResponse.repo_id === selectedRepository?.id
+            ? [patchResponse.target_path]
+            : null;
+
       if (
         !selectedRepository ||
         selectedRepository.source_type !== "local" ||
-        !patchResponse ||
-        patchResponse.repo_id !== selectedRepository.id
+        !changedPaths ||
+        changedPaths.length === 0
       ) {
         startTransition(() => {
           setCheckRecommendation(null);
@@ -218,7 +234,7 @@ export function WorkspaceShell() {
       try {
         setIsLoadingCheckRecommendation(true);
         const response = await fetchRecommendedChecks({
-          changed_paths: [patchResponse.target_path],
+          changed_paths: changedPaths,
           repo_id: selectedRepository.id,
         });
         if (!active) {
@@ -243,7 +259,7 @@ export function WorkspaceShell() {
     return () => {
       active = false;
     };
-  }, [patchResponse, selectedRepository]);
+  }, [patchBatchResponse, patchResponse, selectedRepository]);
 
   async function handleRepositorySubmit(payload: RepositoryCreatePayload) {
     setIsSubmitting(true);
@@ -320,23 +336,44 @@ export function WorkspaceShell() {
     }
   }
 
-  async function handleDraftPatch(repoId: number, targetPath: string, instruction: string) {
+  async function handleDraftPatch(repoId: number, targetPaths: string[], instruction: string) {
+    const normalizedTargetPaths = targetPaths
+      .map((targetPath) => targetPath.trim())
+      .filter((targetPath) => targetPath.length > 0);
+
+    if (normalizedTargetPaths.length === 0) {
+      return;
+    }
+
     setIsDraftingPatch(true);
     setError(null);
     setStatusMessage(null);
 
     try {
-      const response = await createPatchDraft({
-        instruction,
-        repo_id: repoId,
-        target_path: targetPath,
-      });
-      setPatchResponse(response);
+      if (normalizedTargetPaths.length === 1) {
+        const response = await createPatchDraft({
+          instruction,
+          repo_id: repoId,
+          target_path: normalizedTargetPaths[0],
+        });
+        setPatchResponse(response);
+        setPatchBatchResponse(null);
+        setStatusMessage(`patch 草案已生成：${response.target_path}`);
+      } else {
+        const response = await createPatchDraftBatch({
+          instruction,
+          repo_id: repoId,
+          target_paths: normalizedTargetPaths,
+        });
+        setPatchBatchResponse(response);
+        setPatchResponse(null);
+        setStatusMessage(`已生成 ${response.changed_file_count} 个文件的 patch 草案。`);
+      }
+
       setPatchApplyResponse(null);
       setCheckRecommendation(null);
       setCheckResponse(null);
       setSelectedRepoId(repoId);
-      setStatusMessage(`patch 草案已生成：${response.target_path}`);
     } catch (draftError) {
       setError(draftError instanceof Error ? draftError.message : "Unable to draft the patch.");
     } finally {
@@ -424,10 +461,10 @@ export function WorkspaceShell() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <p className="eyebrow">Stage 10 Smart Checks</p>
+        <p className="eyebrow">Stage 11 Multi-File Drafts</p>
         <h1 className="hero-title">代码库问答与改动助手</h1>
         <p className="hero-copy">
-          当前阶段已经接入 OpenAI Agents SDK，并把仓库上下文、问答结果、引用证据、最近会话、patch 草案、安全写回和 checks 推荐闭环整理进一个连续工作台，便于我们围绕同一份代码库持续分析、改动并验证。
+          当前阶段已经把单文件 patch 草案扩展成多文件分组预览：我们现在可以围绕同一份仓库连续问答、查看引用、起草单文件或多文件改动、按推荐 checks 验证，并继续保留单文件安全写回闭环。
         </p>
         <div className="hero-badges">
           {meta?.features?.map((feature) => (
@@ -531,6 +568,7 @@ export function WorkspaceShell() {
           />
           <PatchDraftPanel
             applyResponse={patchApplyResponse}
+            batchResponse={patchBatchResponse}
             isApplying={isApplyingPatch}
             isApplyingAndChecking={isApplyingAndChecking}
             isDrafting={isDraftingPatch}

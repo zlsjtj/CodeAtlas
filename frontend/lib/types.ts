@@ -102,15 +102,20 @@ export type PatchDraftPayload = {
   session_id?: string;
 };
 
+export type PatchBatchDraftPayload = {
+  repo_id: number;
+  target_paths: string[];
+  instruction: string;
+  session_id?: string;
+};
+
 export type PatchDraftTraceSummary = {
   agent_name: string;
   model: string;
   latency_ms: number;
 };
 
-export type PatchDraftResponse = {
-  session_id: string;
-  repo_id: number;
+export type PatchDraftFile = {
   target_path: string;
   base_content_sha256: string;
   summary: string;
@@ -121,6 +126,26 @@ export type PatchDraftResponse = {
   line_count_delta: number;
   unified_diff: string;
   proposed_content: string;
+  trace_summary: PatchDraftTraceSummary;
+};
+
+export type PatchDraftResponse = PatchDraftFile & {
+  session_id: string;
+  repo_id: number;
+};
+
+export type PatchBatchDraftResponse = {
+  session_id: string;
+  repo_id: number;
+  target_paths: string[];
+  summary: string;
+  warnings: string[];
+  changed_file_count: number;
+  total_original_line_count: number;
+  total_proposed_line_count: number;
+  total_line_count_delta: number;
+  combined_unified_diff: string;
+  items: PatchDraftFile[];
   trace_summary: PatchDraftTraceSummary;
 };
 

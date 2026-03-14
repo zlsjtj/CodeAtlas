@@ -2,7 +2,13 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import type { PatchApplyResponse, PatchDraftResponse, RepositoryRecord } from "@/lib/types";
+import type {
+  PatchApplyResponse,
+  PatchBatchDraftResponse,
+  PatchDraftFile,
+  PatchDraftResponse,
+  RepositoryRecord,
+} from "@/lib/types";
 
 type PatchDraftPanelProps = {
   selectedRepository: RepositoryRecord | null;
@@ -11,12 +17,101 @@ type PatchDraftPanelProps = {
   isApplying: boolean;
   isApplyingAndChecking: boolean;
   recommendedCheckCount: number;
-  onDraft: (repoId: number, targetPath: string, instruction: string) => Promise<void> | void;
+  onDraft: (repoId: number, targetPaths: string[], instruction: string) => Promise<void> | void;
   onApply: (response: PatchDraftResponse) => Promise<void> | void;
   onApplyAndCheck: (response: PatchDraftResponse) => Promise<void> | void;
   response: PatchDraftResponse | null;
+  batchResponse: PatchBatchDraftResponse | null;
   applyResponse: PatchApplyResponse | null;
 };
+
+function parseTargetPaths(input: string): string[] {
+  return input
+    .split(/\r?\n/)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+}
+
+function appendSuggestedPath(input: string, suggestedPath: string): string {
+  const currentPaths = parseTargetPaths(input);
+  if (currentPaths.includes(suggestedPath)) {
+    return input;
+  }
+
+  if (currentPaths.length === 0) {
+    return suggestedPath;
+  }
+
+  return `${currentPaths.join("\n")}\n${suggestedPath}`;
+}
+
+function formatLineDelta(lineCountDelta: number): string {
+  return lineCountDelta >= 0 ? `+${lineCountDelta}` : `${lineCountDelta}`;
+}
+
+function DiffPreview({ diff }: { diff: string }) {
+  return (
+    <div className="diff-preview">
+      {diff.split("\n").map((line, index) => {
+        const tone =
+          line.startsWith("+") && !line.startsWith("+++")
+            ? "is-added"
+            : line.startsWith("-") && !line.startsWith("---")
+              ? "is-removed"
+              : line.startsWith("@@")
+                ? "is-hunk"
+                : line.startsWith("---") || line.startsWith("+++")
+                  ? "is-file"
+                  : "";
+
+        return (
+          <div className={`diff-line ${tone}`.trim()} key={`${line}-${index}`}>
+            {line || " "}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PatchDraftFileCard({ item }: { item: PatchDraftFile }) {
+  return (
+    <div className="diff-card">
+      <div className="answer-header">
+        <div className="answer-label">{item.target_path}</div>
+        <div className="meta-pill-row">
+          <span className="meta-pill">
+            {item.original_line_count} to {item.proposed_line_count} lines
+          </span>
+          <span className="meta-pill">{formatLineDelta(item.line_count_delta)}</span>
+          <span className="meta-pill">base {item.base_content_sha256.slice(0, 8)}</span>
+        </div>
+      </div>
+      <div className="patch-copy">{item.summary}</div>
+      <div className="patch-rationale">{item.rationale}</div>
+
+      {item.warnings.length > 0 ? (
+        <div className="patch-warning-list top-gap">
+          {item.warnings.map((warning, index) => (
+            <div className="warning-banner" key={`${item.target_path}-warning-${index}`}>
+              {warning}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {item.unified_diff ? (
+        <DiffPreview diff={item.unified_diff} />
+      ) : (
+        <div className="placeholder-card top-gap">
+          <div className="placeholder-copy">
+            这个文件的草案没有生成文本 diff。通常意味着提示不够具体，或者模型判断当前文件无需修改。
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PatchDraftPanel({
   selectedRepository,
@@ -29,36 +124,43 @@ export function PatchDraftPanel({
   onApply,
   onApplyAndCheck,
   response,
+  batchResponse,
   applyResponse,
 }: PatchDraftPanelProps) {
-  const [targetPath, setTargetPath] = useState("");
-  const [instruction, setInstruction] = useState("在这个文件里做一个最小改动，并给我 unified diff 预览。");
+  const [targetPathsInput, setTargetPathsInput] = useState("");
+  const [instruction, setInstruction] = useState(
+    "请围绕这些目标文件做最小必要改动，并返回清晰的 unified diff 预览。",
+  );
 
   useEffect(() => {
-    setTargetPath("");
+    setTargetPathsInput("");
   }, [selectedRepository?.id]);
 
   useEffect(() => {
-    if (!targetPath && suggestedPath) {
-      setTargetPath(suggestedPath);
+    if (!targetPathsInput && suggestedPath) {
+      setTargetPathsInput(suggestedPath);
     }
-  }, [suggestedPath, targetPath]);
+  }, [suggestedPath, targetPathsInput]);
+
+  const parsedTargetPaths = parseTargetPaths(targetPathsInput);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedRepository) {
       return;
     }
-    await onDraft(selectedRepository.id, targetPath.trim(), instruction.trim());
+
+    await onDraft(selectedRepository.id, parsedTargetPaths, instruction.trim());
   }
 
   const isLocalRepository = selectedRepository?.source_type === "local";
+  const isBatchMode = parsedTargetPaths.length > 1;
 
   return (
     <section className="panel-card">
       <h2 className="panel-title">Patch 草案</h2>
       <p className="panel-copy">
-        这一版先支持单文件 patch 草案。你给出目标文件和改动意图，后端会返回完整草案和 unified diff 预览，但不会直接写回仓库。
+        单文件草案会继续保留安全应用入口；如果一次输入多个目标路径，系统会按同一条 instruction 逐个生成草案，并把 diff 按文件分组返回，方便先统一预览。
       </p>
 
       {!selectedRepository ? (
@@ -82,26 +184,34 @@ export function PatchDraftPanel({
             <div className="meta-pill-row">
               <span className="meta-pill">{selectedRepository.status}</span>
               <span className="meta-pill">{selectedRepository.primary_language ?? "language unknown"}</span>
+              <span className="meta-pill">
+                {isBatchMode ? "multi-file preview" : "single-file safe apply"}
+              </span>
             </div>
           </div>
 
           <label className="field-label">
             目标文件路径
-            <input
-              onChange={(event) => setTargetPath(event.target.value)}
-              placeholder="例如 backend/app/services/chat_service.py"
-              value={targetPath}
+            <textarea
+              className="textarea-input"
+              onChange={(event) => setTargetPathsInput(event.target.value)}
+              placeholder={"一行一个路径，例如\nbackend/app/services/chat_service.py\nfrontend/components/checks/checks-panel.tsx"}
+              rows={4}
+              value={targetPathsInput}
             />
           </label>
+          <p className="field-help">
+            一行一个路径。单文件时可以继续走安全应用和 apply-and-checks；多文件时当前只生成预览，不直接写回工作区。
+          </p>
 
           {suggestedPath ? (
             <div className="button-row">
               <button
                 className="button-secondary"
-                onClick={() => setTargetPath(suggestedPath)}
+                onClick={() => setTargetPathsInput((current) => appendSuggestedPath(current, suggestedPath))}
                 type="button"
               >
-                使用最近引用文件
+                添加最近引用文件
               </button>
             </div>
           ) : null}
@@ -119,10 +229,14 @@ export function PatchDraftPanel({
           <div className="button-row">
             <button
               className="button-primary"
-              disabled={isDrafting || !targetPath.trim() || !instruction.trim()}
+              disabled={isDrafting || parsedTargetPaths.length === 0 || !instruction.trim()}
               type="submit"
             >
-              {isDrafting ? "生成中..." : "生成 patch 草案"}
+              {isDrafting
+                ? "生成中..."
+                : isBatchMode
+                  ? `生成多文件 patch 草案 (${parsedTargetPaths.length})`
+                  : "生成 patch 草案"}
             </button>
           </div>
         </form>
@@ -137,7 +251,7 @@ export function PatchDraftPanel({
             </div>
             <div className="summary-card">
               <div className="summary-label">行数变化</div>
-              <div className="summary-value">{response.line_count_delta >= 0 ? `+${response.line_count_delta}` : response.line_count_delta}</div>
+              <div className="summary-value">{formatLineDelta(response.line_count_delta)}</div>
             </div>
             <div className="summary-card">
               <div className="summary-label">生成耗时</div>
@@ -172,7 +286,7 @@ export function PatchDraftPanel({
               <div className="answer-label">Unified Diff 预览</div>
               <div className="meta-pill-row">
                 <span className="meta-pill">
-                  {response.original_line_count} → {response.proposed_line_count} lines
+                  {response.original_line_count} to {response.proposed_line_count} lines
                 </span>
                 <span className="meta-pill">base {response.base_content_sha256.slice(0, 8)}</span>
               </div>
@@ -217,26 +331,7 @@ export function PatchDraftPanel({
               </div>
             </div>
             {response.unified_diff ? (
-              <div className="diff-preview">
-                {response.unified_diff.split("\n").map((line, index) => {
-                  const tone =
-                    line.startsWith("+") && !line.startsWith("+++")
-                      ? "is-added"
-                      : line.startsWith("-") && !line.startsWith("---")
-                        ? "is-removed"
-                        : line.startsWith("@@")
-                          ? "is-hunk"
-                          : line.startsWith("---") || line.startsWith("+++")
-                            ? "is-file"
-                            : "";
-
-                  return (
-                    <div className={`diff-line ${tone}`.trim()} key={`${line}-${index}`}>
-                      {line || " "}
-                    </div>
-                  );
-                })}
-              </div>
+              <DiffPreview diff={response.unified_diff} />
             ) : (
               <div className="placeholder-card">
                 <div className="placeholder-copy">
@@ -254,6 +349,77 @@ export function PatchDraftPanel({
                 : ""}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {batchResponse ? (
+        <div className="patch-stack">
+          <div className="summary-grid">
+            <div className="summary-card">
+              <div className="summary-label">目标文件数</div>
+              <div className="summary-value">{batchResponse.changed_file_count}</div>
+            </div>
+            <div className="summary-card">
+              <div className="summary-label">总行数变化</div>
+              <div className="summary-value">{formatLineDelta(batchResponse.total_line_count_delta)}</div>
+            </div>
+            <div className="summary-card">
+              <div className="summary-label">总耗时</div>
+              <div className="summary-value">{batchResponse.trace_summary.latency_ms} ms</div>
+            </div>
+          </div>
+
+          <div className="answer-card">
+            <div className="answer-header">
+              <div className="answer-label">批量草案摘要</div>
+              <div className="meta-pill-row">
+                <span className="meta-pill">{batchResponse.trace_summary.agent_name}</span>
+                <span className="meta-pill">{batchResponse.trace_summary.model}</span>
+              </div>
+            </div>
+            <div className="patch-copy">{batchResponse.summary}</div>
+            <div className="patch-rationale">
+              这一步先解决“多文件一起预览”的问题；真正写回和 apply-and-check 仍保持单文件安全流，避免一次请求直接覆盖多处工作区内容。
+            </div>
+          </div>
+
+          {batchResponse.warnings.length > 0 ? (
+            <div className="patch-warning-list">
+              {batchResponse.warnings.map((warning, index) => (
+                <div className="warning-banner" key={`${warning}-${index}`}>
+                  {warning}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="focus-card">
+            <div className="focus-card-label">批量预览模式</div>
+            <div className="focus-card-title">先统一看 diff，再决定是否逐个应用</div>
+            <div className="focus-card-copy">
+              {recommendedCheckCount > 0
+                ? `这批改动已经拿到 ${recommendedCheckCount} 个推荐 checks，可以直接在下方 Checks 面板运行。`
+                : "这批改动已经进入推荐 checks 流程；如果没有命中更具体的规则，下方 Checks 面板会回退到全部已发现检查。"}
+            </div>
+          </div>
+
+          {batchResponse.combined_unified_diff ? (
+            <div className="diff-card">
+              <div className="answer-header">
+                <div className="answer-label">Combined Diff 预览</div>
+                <div className="meta-pill-row">
+                  <span className="meta-pill">
+                    {batchResponse.total_original_line_count} to {batchResponse.total_proposed_line_count} lines
+                  </span>
+                </div>
+              </div>
+              <DiffPreview diff={batchResponse.combined_unified_diff} />
+            </div>
+          ) : null}
+
+          {batchResponse.items.map((item) => (
+            <PatchDraftFileCard item={item} key={item.target_path} />
+          ))}
         </div>
       ) : null}
     </section>

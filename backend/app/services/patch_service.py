@@ -18,6 +18,9 @@ from app.schemas.patch import (
     PatchApplyAndCheckResponse,
     PatchApplyRequest,
     PatchApplyResponse,
+    PatchBatchDraftRequest,
+    PatchBatchDraftResponse,
+    PatchDraftFile,
     PatchDraftRequest,
     PatchDraftResponse,
     PatchDraftTraceSummary,
@@ -27,6 +30,7 @@ from app.services.repository_service import RepositoryService, RepositoryValidat
 
 MAX_PATCH_FILE_CHARS = 20_000
 MAX_PATCH_FILE_LINES = 500
+MAX_BATCH_PATCH_FILES = 5
 
 
 class PatchConfigurationError(ValueError):
@@ -44,57 +48,71 @@ class PatchService:
         self.repository_service = RepositoryService(db)
 
     async def draft_patch(self, payload: PatchDraftRequest) -> PatchDraftResponse:
-        settings = get_settings()
-        if not os.getenv("OPENAI_API_KEY"):
-            raise PatchConfigurationError(
-                "OPENAI_API_KEY is not configured. Set it before calling /api/patches/draft."
-            )
-
-        repository = self.repository_service.get_repository(payload.repo_id)
-        if repository.source_type != "local":
-            raise RepositoryValidationError("Patch drafting is currently available only for local repositories.")
-
-        _, original_content = self._read_target_file(repository.id, payload.target_path)
         session_id = payload.session_id or uuid4().hex
-        prompt = self._build_prompt(
-            repo_name=repository.name,
+        settings, repository = self._prepare_patch_drafting(payload.repo_id)
+        draft_file = await self._draft_patch_file(
+            repository=repository,
             target_path=payload.target_path,
             instruction=payload.instruction,
-            original_content=original_content,
+            model=settings.openai_model,
         )
-
-        started_at = perf_counter()
-        final_output, agent_name = await self._run_agent(prompt=prompt, model=settings.openai_model)
-        latency_ms = int((perf_counter() - started_at) * 1000)
-
-        proposed_content = self._normalize_content(final_output.proposed_content)
-        original_line_count = self._count_lines(original_content)
-        proposed_line_count = self._count_lines(proposed_content)
-        unified_diff = self._build_unified_diff(
-            target_path=payload.target_path,
-            original_content=original_content,
-            proposed_content=proposed_content,
-        )
-
-        warnings = list(final_output.warnings)
-        if not unified_diff:
-            warnings.append("The draft did not introduce a textual diff. Refine the instruction if you expected a code change.")
-
         return PatchDraftResponse(
             session_id=session_id,
             repo_id=payload.repo_id,
-            target_path=payload.target_path.strip().strip("/"),
-            base_content_sha256=self._hash_content(original_content),
-            summary=final_output.summary,
-            rationale=final_output.rationale,
+            **draft_file.model_dump(),
+        )
+
+    async def draft_patch_batch(self, payload: PatchBatchDraftRequest) -> PatchBatchDraftResponse:
+        session_id = payload.session_id or uuid4().hex
+        settings, repository = self._prepare_patch_drafting(payload.repo_id)
+        target_paths, batch_warnings = self._normalize_target_paths(payload.target_paths)
+
+        started_at = perf_counter()
+        items: list[PatchDraftFile] = []
+        for target_path in target_paths:
+            items.append(
+                await self._draft_patch_file(
+                    repository=repository,
+                    target_path=target_path,
+                    instruction=payload.instruction,
+                    model=settings.openai_model,
+                )
+            )
+        latency_ms = int((perf_counter() - started_at) * 1000)
+
+        combined_unified_diff = "\n\n".join(item.unified_diff for item in items if item.unified_diff)
+        warnings = list(batch_warnings)
+        warnings.extend(
+            f"{item.target_path}: {warning}"
+            for item in items
+            for warning in item.warnings
+        )
+        changed_file_count = len(items)
+        total_original_line_count = sum(item.original_line_count for item in items)
+        total_proposed_line_count = sum(item.proposed_line_count for item in items)
+        diff_free_count = sum(1 for item in items if not item.unified_diff)
+        if diff_free_count:
+            warnings.append(
+                f"{diff_free_count} file(s) did not produce a textual diff. Review the item-level warnings before applying anything."
+            )
+
+        return PatchBatchDraftResponse(
+            session_id=session_id,
+            repo_id=payload.repo_id,
+            target_paths=target_paths,
+            summary=(
+                f"Generated patch drafts for {changed_file_count} file(s). "
+                "Review the grouped diffs first, then apply any accepted changes one file at a time."
+            ),
             warnings=warnings,
-            original_line_count=original_line_count,
-            proposed_line_count=proposed_line_count,
-            line_count_delta=proposed_line_count - original_line_count,
-            unified_diff=unified_diff,
-            proposed_content=proposed_content,
+            changed_file_count=changed_file_count,
+            total_original_line_count=total_original_line_count,
+            total_proposed_line_count=total_proposed_line_count,
+            total_line_count_delta=total_proposed_line_count - total_original_line_count,
+            combined_unified_diff=combined_unified_diff,
+            items=items,
             trace_summary=PatchDraftTraceSummary(
-                agent_name=agent_name,
+                agent_name=items[0].trace_summary.agent_name if items else "PatchDraftAssistant",
                 model=settings.openai_model,
                 latency_ms=latency_ms,
             ),
@@ -167,6 +185,19 @@ class PatchService:
             checks=check_result,
         )
 
+    def _prepare_patch_drafting(self, repo_id: int):
+        settings = get_settings()
+        if not os.getenv("OPENAI_API_KEY"):
+            raise PatchConfigurationError(
+                "OPENAI_API_KEY is not configured. Set it before calling /api/patches/draft."
+            )
+
+        repository = self.repository_service.get_repository(repo_id)
+        if repository.source_type != "local":
+            raise RepositoryValidationError("Patch drafting is currently available only for local repositories.")
+
+        return settings, repository
+
     async def _run_agent(self, *, prompt: str, model: str) -> tuple[PatchDraftFinalOutput, str]:
         agent = build_patch_draft_agent(model)
         result = await Runner.run(agent, prompt)
@@ -177,8 +208,63 @@ class PatchService:
         agent_name = getattr(getattr(result, "last_agent", None), "name", agent.name)
         return final_output, agent_name
 
+    async def _draft_patch_file(
+        self,
+        *,
+        repository,
+        target_path: str,
+        instruction: str,
+        model: str,
+    ) -> PatchDraftFile:
+        normalized_target_path = target_path.strip().strip("/")
+        _, original_content = self._read_target_file_from_repository(repository, normalized_target_path)
+        prompt = self._build_prompt(
+            repo_name=repository.name,
+            target_path=normalized_target_path,
+            instruction=instruction,
+            original_content=original_content,
+        )
+
+        started_at = perf_counter()
+        final_output, agent_name = await self._run_agent(prompt=prompt, model=model)
+        latency_ms = int((perf_counter() - started_at) * 1000)
+
+        proposed_content = self._normalize_content(final_output.proposed_content)
+        original_line_count = self._count_lines(original_content)
+        proposed_line_count = self._count_lines(proposed_content)
+        unified_diff = self._build_unified_diff(
+            target_path=normalized_target_path,
+            original_content=original_content,
+            proposed_content=proposed_content,
+        )
+
+        warnings = list(final_output.warnings)
+        if not unified_diff:
+            warnings.append("The draft did not introduce a textual diff. Refine the instruction if you expected a code change.")
+
+        return PatchDraftFile(
+            target_path=normalized_target_path,
+            base_content_sha256=self._hash_content(original_content),
+            summary=final_output.summary,
+            rationale=final_output.rationale,
+            warnings=warnings,
+            original_line_count=original_line_count,
+            proposed_line_count=proposed_line_count,
+            line_count_delta=proposed_line_count - original_line_count,
+            unified_diff=unified_diff,
+            proposed_content=proposed_content,
+            trace_summary=PatchDraftTraceSummary(
+                agent_name=agent_name,
+                model=model,
+                latency_ms=latency_ms,
+            ),
+        )
+
     def _read_target_file(self, repo_id: int, target_path: str) -> tuple[Path, str]:
         repository = self.repository_service.get_repository(repo_id)
+        return self._read_target_file_from_repository(repository, target_path)
+
+    def _read_target_file_from_repository(self, repository, target_path: str) -> tuple[Path, str]:
         file_path = self.repository_service.resolve_relative_path(repository, target_path)
         if not file_path.is_file():
             raise RepositoryValidationError("The target_path must point to a file inside the repository.")
@@ -199,6 +285,30 @@ class PatchService:
             )
 
         return file_path, content
+
+    def _normalize_target_paths(self, target_paths: list[str]) -> tuple[list[str], list[str]]:
+        normalized_paths: list[str] = []
+        warnings: list[str] = []
+        seen_paths: set[str] = set()
+
+        for raw_target_path in target_paths:
+            normalized_target_path = raw_target_path.strip().strip("/")
+            if not normalized_target_path:
+                continue
+            if normalized_target_path in seen_paths:
+                warnings.append(f"Skipped duplicate target path: {normalized_target_path}.")
+                continue
+            seen_paths.add(normalized_target_path)
+            normalized_paths.append(normalized_target_path)
+
+        if not normalized_paths:
+            raise RepositoryValidationError("Provide at least one non-empty target path for a batch draft.")
+        if len(normalized_paths) > MAX_BATCH_PATCH_FILES:
+            raise RepositoryValidationError(
+                f"Batch patch preview currently supports up to {MAX_BATCH_PATCH_FILES} files per request."
+            )
+
+        return normalized_paths, warnings
 
     def _build_prompt(
         self,

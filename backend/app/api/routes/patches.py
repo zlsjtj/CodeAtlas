@@ -7,6 +7,8 @@ from app.schemas.patch import (
     PatchApplyAndCheckResponse,
     PatchApplyRequest,
     PatchApplyResponse,
+    PatchBatchDraftRequest,
+    PatchBatchDraftResponse,
     PatchDraftRequest,
     PatchDraftResponse,
 )
@@ -24,6 +26,20 @@ async def draft_patch(
     service = PatchService(db)
     try:
         return await service.draft_patch(payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except (RepositoryValidationError, PatchConfigurationError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/draft-batch", response_model=PatchBatchDraftResponse)
+async def draft_patch_batch(
+    payload: PatchBatchDraftRequest,
+    db: Session = Depends(get_db),
+) -> PatchBatchDraftResponse:
+    service = PatchService(db)
+    try:
+        return await service.draft_patch_batch(payload)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except (RepositoryValidationError, PatchConfigurationError) as exc:

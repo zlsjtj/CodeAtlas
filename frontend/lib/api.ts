@@ -1,4 +1,6 @@
 import type {
+  PatchBatchDraftPayload,
+  PatchBatchDraftResponse,
   CheckProfileListResponse,
   CheckRecommendationPayload,
   CheckRecommendationResponse,
@@ -80,6 +82,13 @@ export function askRepositoryQuestion(payload: ChatAskPayload) {
 
 export function createPatchDraft(payload: PatchDraftPayload) {
   return request<PatchDraftResponse>("/api/patches/draft", {
+    body: JSON.stringify(payload),
+    method: "POST",
+  });
+}
+
+export function createPatchDraftBatch(payload: PatchBatchDraftPayload) {
+  return request<PatchBatchDraftResponse>("/api/patches/draft-batch", {
     body: JSON.stringify(payload),
     method: "POST",
   });
