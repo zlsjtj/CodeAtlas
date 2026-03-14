@@ -35,5 +35,6 @@ def get_meta() -> MetaResponse:
             "frontend_workspace",
             "patch_draft_preview",
             "patch_apply",
+            "checks_runner",
         ],
     )

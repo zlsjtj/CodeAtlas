@@ -1,6 +1,6 @@
 # 代码库问答与改动助手（AI Agent）
 
-面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已经完成前七阶段中的前六层核心能力，并把工作台继续推进到了“能安全应用 patch 草案到工作区”：
+面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已经完成前八阶段中的前七层核心能力，并把工作台继续推进到了“能运行白名单 lint/test 检查并返回结果”：
 
 - 第一阶段：项目骨架、FastAPI、Next.js、SQLite schema、健康检查、仓库导入
 - 第二阶段：本地仓库扫描、文件树接口、基础 chunk 索引、索引状态与调试查询
@@ -9,6 +9,7 @@
 - 第五阶段：前端工作台增强，补当前仓库上下文、最近会话切换、引用摘要和更完整的问答展示
 - 第六阶段：单文件 patch 草案、unified diff 预览，以及前端 patch 工作区
 - 第七阶段：基于内容哈希校验的 patch 应用接口，把已确认的单文件草案安全写回工作区
+- 第八阶段：自动发现白名单检查项，支持运行 `pytest` / `npm run typecheck|lint|test` 并把结果返回到前端
 
 项目目标不是做一个“会聊天的网页”，而是做一个“能围绕代码任务调用工具、引用证据、逐步扩展到改动建议和检查闭环”的代码助手。
 
@@ -30,11 +31,12 @@
 - 在前端页面内保留最近会话，支持切回历史回答继续查看引用
 - 生成单文件 patch 草案，并在前端直接预览 unified diff
 - 把确认过的 patch 草案安全写回本地工作区，并避免覆盖已变化的文件
+- 自动发现并运行安全白名单内的 lint/test 检查，直接返回 stdout / stderr 摘要
 
 当前仍未实现：
 
 - GitHub 仓库克隆
-- patch 后自动运行 lint/test 的闭环
+- patch 应用后自动触发检查的一键闭环
 - 语义检索、rerank 和 AST 级符号定位增强
 - benchmark 样例、系统化评测和 trace 可视化
 
@@ -136,6 +138,7 @@
 - 问答区、引用区和 trace 摘要
 - 页面内最近会话历史切换
 - Patch 草案表单与 diff 预览
+- Checks 面板与结果摘要
 
 ## 数据模型
 
@@ -243,6 +246,11 @@
 - `POST /api/patches/draft`
 - `POST /api/patches/apply`
 
+### Checks 接口
+
+- `GET /api/checks/repositories/{repo_id}/profiles`
+- `POST /api/checks/run`
+
 请求示例：
 
 ```json
@@ -297,6 +305,71 @@
   "proposed_content": "..."
 }
 ```
+
+`GET /api/checks/repositories/{repo_id}/profiles` 返回示例：
+
+```json
+{
+  "repo_id": 1,
+  "items": [
+    {
+      "id": "backend_pytest",
+      "name": "Pytest (backend)",
+      "category": "test",
+      "working_dir": "E:/repo/backend",
+      "command_preview": "python -m pytest tests"
+    },
+    {
+      "id": "frontend_npm-typecheck",
+      "name": "TypeScript Typecheck (frontend)",
+      "category": "typecheck",
+      "working_dir": "E:/repo/frontend",
+      "command_preview": "npm run typecheck"
+    }
+  ]
+}
+```
+
+`POST /api/checks/run` 请求示例：
+
+```json
+{
+  "repo_id": 1,
+  "profile_ids": ["backend_pytest", "frontend_npm-typecheck"]
+}
+```
+
+返回结构：
+
+```json
+{
+  "repo_id": 1,
+  "status": "passed",
+  "summary": "Completed 2 checks successfully.",
+  "results": [
+    {
+      "id": "backend_pytest",
+      "name": "Pytest (backend)",
+      "category": "test",
+      "working_dir": "E:/repo/backend",
+      "command_preview": "python -m pytest tests",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 820,
+      "stdout": "...",
+      "stderr": "",
+      "truncated": false
+    }
+  ]
+}
+```
+
+说明：
+
+- 当前只运行自动发现的白名单检查，不支持用户自定义任意命令
+- Python 侧目前优先识别 `python -m pytest tests`
+- Node 侧目前优先识别 `npm run typecheck`、`npm run lint`、`npm run test`
+- 输出过长时会截断，优先保证 API 响应稳定
 
 返回结构：
 
@@ -490,6 +563,7 @@ python -m pytest
 - 问答接口：返回回答、引用，并写入 `ConversationTrace`
 - patch 草案接口：返回 unified diff 和完整草案内容
 - patch 应用接口：只在基线内容未变化时把草案写回工作区
+- checks 接口：发现并运行白名单 lint/test 命令，返回结果摘要
 
 ## 设计取舍
 
@@ -507,7 +581,7 @@ python -m pytest
 
 下一阶段建议优先实现：
 
-1. 在 patch 应用后补 lint/test 执行与结果回传
+1. 把 patch 应用与 checks 运行串成“一键应用并验证”的闭环
 2. 增加 benchmark 样例与问答评测
 3. 引入更稳妥的检索策略，例如 embedding 和 rerank
 4. 支持多文件 patch 草案与分步确认

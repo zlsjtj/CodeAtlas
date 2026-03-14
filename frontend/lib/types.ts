@@ -141,3 +141,45 @@ export type PatchApplyResponse = {
   written_line_count: number;
   unified_diff: string;
 };
+
+export type CheckCategory = "lint" | "typecheck" | "test";
+export type CheckStatus = "passed" | "failed" | "error" | "skipped";
+
+export type CheckProfile = {
+  id: string;
+  name: string;
+  category: CheckCategory;
+  working_dir: string;
+  command_preview: string;
+};
+
+export type CheckProfileListResponse = {
+  repo_id: number;
+  items: CheckProfile[];
+};
+
+export type CheckRunPayload = {
+  repo_id: number;
+  profile_ids?: string[];
+};
+
+export type CheckExecutionResult = {
+  id: string;
+  name: string;
+  category: CheckCategory;
+  working_dir: string;
+  command_preview: string;
+  status: CheckStatus;
+  exit_code: number | null;
+  duration_ms: number;
+  stdout: string;
+  stderr: string;
+  truncated: boolean;
+};
+
+export type CheckRunResponse = {
+  repo_id: number;
+  status: CheckStatus;
+  summary: string;
+  results: CheckExecutionResult[];
+};

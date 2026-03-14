@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     data_dir: str = "data"
     repos_dir: str = "repos"
     openai_model: str = "gpt-4.1-mini"
+    check_command_timeout_seconds: int = 120
+    check_output_char_limit: int = 4000
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
     def resolve_path(self, raw_path: str) -> Path:

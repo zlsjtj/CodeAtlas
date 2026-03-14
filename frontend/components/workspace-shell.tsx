@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useState } from "react";
 
+import { ChecksPanel } from "@/components/checks/checks-panel";
 import { ChatHistoryPanel } from "@/components/chat/chat-history-panel";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { CitationPanel } from "@/components/citations/citation-panel";
@@ -13,12 +14,16 @@ import {
   askRepositoryQuestion,
   createPatchDraft,
   createRepository,
+  fetchCheckProfiles,
   fetchHealth,
   fetchMeta,
   indexRepository,
   listRepositories,
+  runRepositoryChecks,
 } from "@/lib/api";
 import type {
+  CheckProfile,
+  CheckRunResponse,
   ChatAskResponse,
   HealthResponse,
   MetaResponse,
@@ -37,14 +42,18 @@ export function WorkspaceShell() {
   const [chatResponse, setChatResponse] = useState<ChatAskResponse | null>(null);
   const [patchResponse, setPatchResponse] = useState<PatchDraftResponse | null>(null);
   const [patchApplyResponse, setPatchApplyResponse] = useState<PatchApplyResponse | null>(null);
+  const [checkProfiles, setCheckProfiles] = useState<CheckProfile[]>([]);
+  const [checkResponse, setCheckResponse] = useState<CheckRunResponse | null>(null);
   const [chatHistory, setChatHistory] = useState<WorkspaceChatEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingCheckProfiles, setIsLoadingCheckProfiles] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
   const [isDraftingPatch, setIsDraftingPatch] = useState(false);
   const [isApplyingPatch, setIsApplyingPatch] = useState(false);
+  const [isRunningChecks, setIsRunningChecks] = useState(false);
   const [indexingRepoId, setIndexingRepoId] = useState<number | null>(null);
   const [selectedRepoId, setSelectedRepoId] = useState<number | null>(null);
   const [activeChatRepoId, setActiveChatRepoId] = useState<number | null>(null);
@@ -131,7 +140,51 @@ export function WorkspaceShell() {
       }
       return current.repo_id === selectedRepoId ? current : null;
     });
+    setCheckResponse((current) => {
+      if (!current) {
+        return current;
+      }
+      return current.repo_id === selectedRepoId ? current : null;
+    });
   }, [selectedRepoId]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCheckProfiles() {
+      if (!selectedRepository || selectedRepository.source_type !== "local") {
+        startTransition(() => {
+          setCheckProfiles([]);
+        });
+        return;
+      }
+
+      try {
+        setIsLoadingCheckProfiles(true);
+        const response = await fetchCheckProfiles(selectedRepository.id);
+        if (!active) {
+          return;
+        }
+        startTransition(() => {
+          setCheckProfiles(response.items);
+        });
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+        setError(loadError instanceof Error ? loadError.message : "Unable to load available checks.");
+      } finally {
+        if (active) {
+          setIsLoadingCheckProfiles(false);
+        }
+      }
+    }
+
+    void loadCheckProfiles();
+    return () => {
+      active = false;
+    };
+  }, [selectedRepository]);
 
   async function handleRepositorySubmit(payload: RepositoryCreatePayload) {
     setIsSubmitting(true);
@@ -251,6 +304,29 @@ export function WorkspaceShell() {
     }
   }
 
+  async function handleRunChecks(profileIds?: string[]) {
+    if (!selectedRepository) {
+      return;
+    }
+
+    setIsRunningChecks(true);
+    setError(null);
+    setStatusMessage(null);
+
+    try {
+      const response = await runRepositoryChecks({
+        profile_ids: profileIds,
+        repo_id: selectedRepository.id,
+      });
+      setCheckResponse(response);
+      setStatusMessage(`检查执行完成：${response.summary}`);
+    } catch (checkError) {
+      setError(checkError instanceof Error ? checkError.message : "Unable to run repository checks.");
+    } finally {
+      setIsRunningChecks(false);
+    }
+  }
+
   function handleSelectHistory(entry: WorkspaceChatEntry) {
     setSelectedRepoId(entry.repository_id);
     setActiveChatRepoId(entry.repository_id);
@@ -261,7 +337,7 @@ export function WorkspaceShell() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <p className="eyebrow">Stage 7 Safe Apply</p>
+        <p className="eyebrow">Stage 8 Checks Loop</p>
         <h1 className="hero-title">代码库问答与改动助手</h1>
         <p className="hero-copy">
           当前阶段已经接入 OpenAI Agents SDK，并把仓库上下文、问答结果、引用证据、最近会话、patch 草案预览和安全写回流程整理进一个连续工作台，便于我们围绕同一份代码库持续分析和准备改动。
@@ -375,6 +451,15 @@ export function WorkspaceShell() {
             response={patchResponse}
             selectedRepository={selectedRepository}
             suggestedPath={suggestedPatchPath}
+          />
+          <ChecksPanel
+            isLoadingProfiles={isLoadingCheckProfiles}
+            isRunningChecks={isRunningChecks}
+            onRunChecks={handleRunChecks}
+            patchApplyResponse={patchApplyResponse}
+            profiles={checkProfiles}
+            response={checkResponse}
+            selectedRepository={selectedRepository}
           />
           <CitationPanel response={chatResponse} />
         </div>

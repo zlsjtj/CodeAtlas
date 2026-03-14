@@ -1,4 +1,7 @@
 import type {
+  CheckProfileListResponse,
+  CheckRunPayload,
+  CheckRunResponse,
   PatchApplyPayload,
   PatchApplyResponse,
   ChatAskPayload,
@@ -80,6 +83,17 @@ export function createPatchDraft(payload: PatchDraftPayload) {
 
 export function applyPatchDraft(payload: PatchApplyPayload) {
   return request<PatchApplyResponse>("/api/patches/apply", {
+    body: JSON.stringify(payload),
+    method: "POST",
+  });
+}
+
+export function fetchCheckProfiles(repoId: number) {
+  return request<CheckProfileListResponse>(`/api/checks/repositories/${repoId}/profiles`);
+}
+
+export function runRepositoryChecks(payload: CheckRunPayload) {
+  return request<CheckRunResponse>("/api/checks/run", {
     body: JSON.stringify(payload),
     method: "POST",
   });
