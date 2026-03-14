@@ -1,4 +1,6 @@
 import type {
+  ChatAskPayload,
+  ChatAskResponse,
   HealthResponse,
   MetaResponse,
   RepositoryCreatePayload,
@@ -54,6 +56,13 @@ export function createRepository(payload: RepositoryCreatePayload) {
 
 export function indexRepository(repoId: number) {
   return request<RepositoryIndexResponse>(`/api/repositories/${repoId}/index`, {
+    method: "POST",
+  });
+}
+
+export function askRepositoryQuestion(payload: ChatAskPayload) {
+  return request<ChatAskResponse>("/api/chat/ask", {
+    body: JSON.stringify(payload),
     method: "POST",
   });
 }

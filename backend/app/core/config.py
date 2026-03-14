@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     database_path: str = "data/code_repo_agent.db"
     data_dir: str = "data"
     repos_dir: str = "repos"
+    openai_model: str = "gpt-4.1-mini"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
     def resolve_path(self, raw_path: str) -> Path:
@@ -48,4 +49,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

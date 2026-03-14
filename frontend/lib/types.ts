@@ -47,3 +47,40 @@ export type RepositoryCreatePayload = {
   source_url?: string;
   default_branch?: string;
 };
+
+export type ChatCitation = {
+  path: string;
+  start_line: number | null;
+  end_line: number | null;
+  symbol: string | null;
+  note: string;
+  excerpt: string | null;
+};
+
+export type ChatTraceStep = {
+  tool_name: string;
+  args_summary: string;
+  item_count: number;
+  summary: string | null;
+};
+
+export type ChatTraceSummary = {
+  agent_name: string;
+  model: string;
+  latency_ms: number;
+  tool_call_count: number;
+  steps: ChatTraceStep[];
+};
+
+export type ChatAskPayload = {
+  repo_id: number;
+  question: string;
+  session_id?: string;
+};
+
+export type ChatAskResponse = {
+  session_id: string;
+  answer: string;
+  citations: ChatCitation[];
+  trace_summary: ChatTraceSummary;
+};

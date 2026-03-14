@@ -30,6 +30,8 @@ def get_meta() -> MetaResponse:
             "search_repo",
             "read_file",
             "find_symbol",
+            "code_assistant_agent",
+            "conversation_trace",
             "frontend_workspace",
         ],
     )

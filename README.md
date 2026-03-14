@@ -1,10 +1,11 @@
 # 代码库问答与改动助手（AI Agent）
 
-面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已完成前三阶段中的前两层核心基础，并已把第一批代码工具接起来：
+面向本地代码仓库与 GitHub 仓库的工程化 AI Agent 项目。当前已完成前四阶段中的前三层核心能力，并已经把最小问答主流程接起来：
 
 - 第一阶段：项目骨架、FastAPI、Next.js、SQLite schema、健康检查、仓库导入
 - 第二阶段：本地仓库扫描、文件树接口、基础 chunk 索引、索引状态与调试查询
 - 第三阶段：`list_repo_tree`、`search_repo`、`read_file`、`find_symbol` 工具与统一返回结构
+- 第四阶段：OpenAI Agents SDK 问答主流程、`/api/chat/ask`、引用返回与 `ConversationTrace` 落库
 
 项目目标不是做一个“会聊天的网页”，而是做一个“能围绕代码任务调用工具、引用证据、逐步扩展到改动建议和检查闭环”的代码助手。
 
@@ -21,13 +22,15 @@
 - 查询部分 chunk，便于调试下一阶段检索工具
 - 在前端工作台直接触发索引
 - 通过统一工具接口执行目录树、关键词检索、按行读文件和符号定位
+- 通过 OpenAI Agents SDK 自动调用工具并返回带引用的回答
+- 持久化问答 trace，包括工具调用摘要、引用和最终答案
 
 当前仍未实现：
 
 - GitHub 仓库克隆
-- OpenAI Agents SDK 问答主流程
 - patch 草案、diff 预览、lint/test 闭环
 - 语义检索、rerank 和 AST 级符号定位增强
+- benchmark 样例、系统化评测和 trace 可视化
 
 ## 项目目录
 
@@ -39,8 +42,10 @@
 │  │  │  ├─ router.py
 │  │  │  └─ routes/
 │  │  │     ├─ health.py
+│  │  │     ├─ chat.py
 │  │  │     └─ repositories.py
 │  │  ├─ agents/
+│  │  │  └─ code_assistant.py
 │  │  ├─ core/
 │  │  │  ├─ config.py
 │  │  │  └─ db.py
@@ -53,8 +58,10 @@
 │  │  │  └─ conversation_trace.py
 │  │  ├─ schemas/
 │  │  │  ├─ common.py
+│  │  │  ├─ chat.py
 │  │  │  └─ repository.py
 │  │  ├─ services/
+│  │  │  ├─ chat_service.py
 │  │  │  ├─ repository_service.py
 │  │  │  └─ indexing_service.py
 │  │  ├─ tools/
@@ -104,6 +111,12 @@
   - 文件树
   - 索引状态
   - chunk 列表
+- 问答主流程：
+  - Code Assistant Agent
+  - 受控工具调用
+  - 结构化回答
+  - 引用返回
+  - trace 持久化
 
 ### 前端
 
@@ -212,6 +225,58 @@
 }
 ```
 
+### 问答接口
+
+- `POST /api/chat/ask`
+
+请求示例：
+
+```json
+{
+  "repo_id": 1,
+  "question": "这个仓库的索引流程是怎么工作的？"
+}
+```
+
+返回结构：
+
+```json
+{
+  "session_id": "b3dbf4...",
+  "answer": "## 结论\n...\n\n## 依据\n...",
+  "citations": [
+    {
+      "path": "backend/app/services/indexing_service.py",
+      "start_line": 12,
+      "end_line": 68,
+      "symbol": null,
+      "note": "这里是索引入口和 chunk 写入流程。",
+      "excerpt": "..."
+    }
+  ],
+  "trace_summary": {
+    "agent_name": "CodeAssistant",
+    "model": "gpt-4.1-mini",
+    "latency_ms": 1450,
+    "tool_call_count": 3,
+    "steps": [
+      {
+        "tool_name": "search_repo",
+        "args_summary": "query=indexing_service, limit=8",
+        "item_count": 2,
+        "summary": "Found 2 indexed chunk matches."
+      }
+    ]
+  }
+}
+```
+
+说明：
+
+- 当前问答能力只支持已经完成索引的本地仓库
+- Agent 会被要求至少调用一个工具后再回答
+- 如果证据不足，Agent 应明确说明不确定，而不是编造引用
+
 ## 索引策略
 
 第二阶段采用最稳妥、最简单的可工作方案：
@@ -238,6 +303,11 @@
 ```powershell
 Copy-Item .env.example .env
 ```
+
+至少需要配置：
+
+- `OPENAI_API_KEY`
+- 可选：`CODE_AGENT_OPENAI_MODEL`，默认是 `gpt-4.1-mini`
 
 ### 2. 启动后端
 
@@ -312,6 +382,10 @@ POST /api/tools/find-symbol
 ```
 
 7. 打开前端首页，点击“触发索引”，确认能看到成功提示
+8. 在前端问答区选择一个已完成索引的本地仓库，提问并确认页面展示：
+   - 回答正文
+   - 引用列表
+   - 工具调用摘要
 
 ## 测试
 
@@ -329,6 +403,7 @@ python -m pytest
 - 文件树过滤
 - 索引写入与状态查询
 - 工具接口：目录树、检索、读文件、找符号
+- 问答接口：返回回答、引用，并写入 `ConversationTrace`
 
 ## 设计取舍
 
@@ -346,8 +421,8 @@ python -m pytest
 
 下一阶段建议优先实现：
 
-1. 接入 OpenAI Agents SDK
-2. 让 Agent 自主调用 `list_repo_tree` / `search_repo` / `read_file` / `find_symbol`
-3. 输出带路径和行号的 citations
-4. 记录 `ConversationTrace`
-5. 为 benchmark 和 trace 评测预留接口
+1. 改善 Agent prompt 与工具策略
+2. 增加 benchmark 样例与问答评测
+3. 前端补会话历史与引用片段卡片细节
+4. 增加 patch 草案和 diff 预览
+5. 增加 lint/test 闭环

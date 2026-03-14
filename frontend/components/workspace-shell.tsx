@@ -6,8 +6,16 @@ import { ChatPanel } from "@/components/chat/chat-panel";
 import { CitationPanel } from "@/components/citations/citation-panel";
 import { RepositoryImportForm } from "@/components/repositories/repository-import-form";
 import { RepositoryList } from "@/components/repositories/repository-list";
-import { createRepository, fetchHealth, fetchMeta, indexRepository, listRepositories } from "@/lib/api";
+import {
+  askRepositoryQuestion,
+  createRepository,
+  fetchHealth,
+  fetchMeta,
+  indexRepository,
+  listRepositories,
+} from "@/lib/api";
 import type {
+  ChatAskResponse,
   HealthResponse,
   MetaResponse,
   RepositoryCreatePayload,
@@ -19,10 +27,12 @@ export function WorkspaceShell() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [meta, setMeta] = useState<MetaResponse | null>(null);
   const [repositories, setRepositories] = useState<RepositoryRecord[]>([]);
+  const [chatResponse, setChatResponse] = useState<ChatAskResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAsking, setIsAsking] = useState(false);
   const [indexingRepoId, setIndexingRepoId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -110,13 +120,29 @@ export function WorkspaceShell() {
     }
   }
 
+  async function handleAsk(repoId: number, question: string) {
+    setIsAsking(true);
+    setError(null);
+    setStatusMessage(null);
+
+    try {
+      const response = await askRepositoryQuestion({ repo_id: repoId, question });
+      setChatResponse(response);
+      setStatusMessage("问答已完成，下面可以查看引用和工具调用摘要。");
+    } catch (askError) {
+      setError(askError instanceof Error ? askError.message : "Unable to ask the repository question.");
+    } finally {
+      setIsAsking(false);
+    }
+  }
+
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <p className="eyebrow">Stage 3 MVP</p>
+        <p className="eyebrow">Stage 4 MVP</p>
         <h1 className="hero-title">代码库问答与改动助手</h1>
         <p className="hero-copy">
-          当前阶段已经能登记仓库、建立基础索引，并通过统一工具接口执行目录树查询、关键词检索、按行读文件和符号定位。后续会在这层工具之上接入 OpenAI Agents SDK 问答主流程。
+          当前阶段已经接入 OpenAI Agents SDK。系统会围绕已选仓库调用目录树、搜索、读文件和符号定位工具，再返回带引用和 trace 摘要的结构化回答。
         </p>
         <div className="hero-grid">
           <div className="hero-stat">
@@ -128,8 +154,8 @@ export function WorkspaceShell() {
             <div className="hero-stat-value">{repositories.length}</div>
           </div>
           <div className="hero-stat">
-            <div className="hero-stat-label">Reserved Modules</div>
-            <div className="hero-stat-value">agent / patch / checks</div>
+            <div className="hero-stat-label">Live Workflow</div>
+            <div className="hero-stat-value">tool calls to cited answers</div>
           </div>
         </div>
       </section>
@@ -153,7 +179,9 @@ export function WorkspaceShell() {
         <div className="panel-stack">
           <section className="panel-card">
             <h2 className="panel-title">运行状态</h2>
-            <p className="panel-copy">前端会在加载时探测后端健康状态和基础能力开关，确认第一阶段工作台可用。</p>
+            <p className="panel-copy">
+              前端会在加载时探测后端健康状态和当前能力开关，帮助我们确认问答工作台已经接通。
+            </p>
             <div className="status-grid">
               <div className="status-card">
                 <div className="status-label">应用名称</div>
@@ -171,8 +199,13 @@ export function WorkspaceShell() {
               </div>
             </div>
           </section>
-          <ChatPanel />
-          <CitationPanel />
+          <ChatPanel
+            isAsking={isAsking}
+            onAsk={handleAsk}
+            repositories={repositories}
+            response={chatResponse}
+          />
+          <CitationPanel response={chatResponse} />
         </div>
       </section>
     </main>

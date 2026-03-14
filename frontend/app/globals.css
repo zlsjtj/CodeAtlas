@@ -177,13 +177,19 @@ select {
 }
 
 .field-label input,
-.field-label select {
+.field-label select,
+.textarea-input {
   width: 100%;
   padding: 13px 14px;
   border: 1px solid rgba(76, 61, 42, 0.14);
   border-radius: 14px;
   background: var(--panel-strong);
   color: var(--text);
+}
+
+.textarea-input {
+  min-height: 140px;
+  resize: vertical;
 }
 
 .field-help {
@@ -313,6 +319,60 @@ select {
 .placeholder-title {
   margin: 0 0 8px;
   font-size: 1rem;
+}
+
+.answer-card,
+.trace-card,
+.citation-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.answer-card {
+  margin-top: 18px;
+}
+
+.answer-label,
+.citation-path,
+.trace-step-title {
+  font-weight: 600;
+}
+
+.answer-body,
+.citation-excerpt {
+  margin: 10px 0 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(36, 28, 18, 0.05);
+  color: var(--text);
+  white-space: pre-wrap;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.citation-stack,
+.citation-list,
+.trace-step-list {
+  display: grid;
+  gap: 12px;
+}
+
+.trace-meta,
+.citation-note,
+.citation-meta,
+.trace-step-copy {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.trace-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 960px) {
