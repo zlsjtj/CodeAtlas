@@ -74,7 +74,7 @@ class PatchApplyRequest(PatchApplyFile):
 class PatchApplyResponse(BaseModel):
     repo_id: int
     target_path: str
-    status: Literal["applied", "noop"]
+    status: Literal["applied", "noop", "rolled_back"]
     message: str
     previous_sha256: str
     written_sha256: str
@@ -89,10 +89,11 @@ class PatchBatchApplyRequest(BaseModel):
 
 class PatchBatchApplyResponse(BaseModel):
     repo_id: int
-    status: Literal["applied", "noop"]
+    status: Literal["applied", "noop", "rolled_back"]
     message: str
     applied_count: int
     noop_count: int
+    rolled_back_count: int = 0
     target_paths: list[str]
     combined_unified_diff: str
     results: list[PatchApplyResponse]

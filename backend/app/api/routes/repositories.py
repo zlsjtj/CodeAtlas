@@ -57,7 +57,7 @@ def get_repository_tree(
 
     try:
         repository = repository_service.get_repository(repo_id)
-        root = repository_service.resolve_local_root(repository)
+        root = repository_service.resolve_repository_root(repository)
         return indexing_service.build_tree(repository, root=root, path=path, depth=depth)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

@@ -75,3 +75,16 @@ def test_index_github_repository_after_clone(client, monkeypatch):
     assert payload["status"] == "ready"
     assert payload["file_count"] == 1
     assert payload["chunk_count"] >= 1
+
+
+def test_create_github_repository_rejects_non_github_host(client):
+    response = client.post(
+        "/api/repositories",
+        json={
+            "source_type": "github",
+            "source_url": "https://example.com/not-github/repo",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Only configured Git hosts are allowed" in response.json()["detail"]

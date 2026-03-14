@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -28,6 +29,7 @@ ALLOWED_NPM_SCRIPTS: tuple[tuple[str, CheckCategory, str], ...] = (
     ("lint", "lint", "Lint"),
     ("test", "test", "Test"),
 )
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -84,6 +86,11 @@ class CheckService:
         else:
             selected_profiles = profiles
 
+        logger.info(
+            "checks.run.start repo_id=%s profile_ids=%s",
+            payload.repo_id,
+            [profile.id for profile in selected_profiles],
+        )
         results = [self._run_profile(profile) for profile in selected_profiles]
         if not results:
             status = "skipped"
@@ -95,12 +102,19 @@ class CheckService:
             status = "passed"
             summary = f"Completed {len(results)} checks successfully."
 
-        return CheckRunResponse(
+        response = CheckRunResponse(
             repo_id=payload.repo_id,
             status=status,
             summary=summary,
             results=results,
         )
+        logger.info(
+            "checks.run.complete repo_id=%s status=%s result_count=%s",
+            payload.repo_id,
+            response.status,
+            len(response.results),
+        )
+        return response
 
     def recommend_profiles(self, payload: CheckRecommendationRequest) -> CheckRecommendationResponse:
         repository = self.repository_service.get_repository(payload.repo_id)
@@ -136,7 +150,7 @@ class CheckService:
                 ],
             )
 
-        root = self.repository_service.resolve_local_root(repository)
+        root = self.repository_service.resolve_repository_root(repository)
         scored: list[tuple[int, ResolvedCheckProfile, str]] = []
         for profile in profiles:
             score, reason = self._score_profile(profile, normalized_paths, root=root)

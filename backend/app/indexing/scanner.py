@@ -128,7 +128,7 @@ class RepositoryScanner:
                     continue
 
                 line_count = max(1, len(text.splitlines()))
-                language = self._detect_language(candidate)
+                language = self.detect_language(candidate)
                 if language:
                     language_counts[language] += line_count
 
@@ -151,7 +151,7 @@ class RepositoryScanner:
             language_counts=language_counts,
         )
 
-    def _detect_language(self, path: Path) -> str | None:
+    def detect_language(self, path: Path) -> str | None:
         return LANGUAGE_BY_NAME.get(path.name) or LANGUAGE_BY_SUFFIX.get(path.suffix.lower())
 
     def _is_binary(self, path: Path) -> bool:

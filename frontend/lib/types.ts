@@ -165,7 +165,7 @@ export type PatchApplyItemPayload = {
 export type PatchApplyResponse = {
   repo_id: number;
   target_path: string;
-  status: "applied" | "noop";
+  status: "applied" | "noop" | "rolled_back";
   message: string;
   previous_sha256: string;
   written_sha256: string;
@@ -180,10 +180,11 @@ export type PatchBatchApplyPayload = {
 
 export type PatchBatchApplyResponse = {
   repo_id: number;
-  status: "applied" | "noop";
+  status: "applied" | "noop" | "rolled_back";
   message: string;
   applied_count: number;
   noop_count: number;
+  rolled_back_count: number;
   target_paths: string[];
   combined_unified_diff: string;
   results: PatchApplyResponse[];

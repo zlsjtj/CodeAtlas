@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import logging
 from time import perf_counter
 from uuid import uuid4
 
@@ -22,6 +23,8 @@ from app.schemas.chat import ChatAskRequest, ChatAskResponse, ChatTraceStep, Cha
 from app.services.repository_service import RepositoryService, RepositoryValidationError
 from app.tools.repository_tools import RepositoryTools
 
+logger = logging.getLogger(__name__)
+
 
 class ChatConfigurationError(ValueError):
     """Raised when the chat runtime is not configured correctly."""
@@ -41,6 +44,7 @@ class ChatService:
         self._validate_repository_for_chat(repository)
 
         session_id = payload.session_id or uuid4().hex
+        logger.info("chat.ask.start repo_id=%s session_id=%s", repository.id, session_id)
         runtime = RepositoryTools(self.db)
         run_context = CodeAssistantRunContext(
             repo_id=repository.id,
@@ -76,6 +80,13 @@ class ChatService:
         )
         self.db.add(trace)
         self.db.commit()
+        logger.info(
+            "chat.ask.success repo_id=%s session_id=%s tool_calls=%s latency_ms=%s",
+            repository.id,
+            session_id,
+            len(run_context.tool_events),
+            latency_ms,
+        )
 
         return ChatAskResponse(
             session_id=session_id,

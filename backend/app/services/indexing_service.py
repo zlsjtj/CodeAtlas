@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 from sqlalchemy import delete, distinct, func, select
 from sqlalchemy.orm import Session
@@ -15,6 +16,8 @@ from app.schemas.repository import (
     RepositoryTreeResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class IndexingService:
     def __init__(self, db: Session):
@@ -25,11 +28,12 @@ class IndexingService:
     def request_index(self, repository: Repository) -> RepositoryIndexResponse:
         from app.services.repository_service import RepositoryService
 
-        root = RepositoryService(self.db).resolve_local_root(repository)
+        root = RepositoryService(self.db).resolve_repository_root(repository)
         repository.status = "indexing"
         self.db.add(repository)
         self.db.commit()
         try:
+            logger.info("repository.index.start repo_id=%s root=%s", repository.id, root)
             scan_result = self.scanner.scan(root)
 
             self.db.execute(delete(FileChunk).where(FileChunk.repo_id == repository.id))
@@ -57,11 +61,20 @@ class IndexingService:
             self.db.add(repository)
             self.db.commit()
             self.db.refresh(repository)
+            logger.info(
+                "repository.index.success repo_id=%s file_count=%s chunk_count=%s skipped=%s primary_language=%s",
+                repository.id,
+                scan_result.file_count,
+                chunk_count,
+                scan_result.skipped_file_count,
+                repository.primary_language,
+            )
         except Exception:
             self.db.rollback()
             repository.status = "failed"
             self.db.add(repository)
             self.db.commit()
+            logger.exception("repository.index.failed repo_id=%s", repository.id)
             raise
 
         return RepositoryIndexResponse(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +38,7 @@ from app.services.repository_service import RepositoryService, RepositoryValidat
 MAX_PATCH_FILE_CHARS = 20_000
 MAX_PATCH_FILE_LINES = 500
 MAX_BATCH_PATCH_FILES = 5
+logger = logging.getLogger(__name__)
 
 
 class PatchConfigurationError(ValueError):
@@ -158,18 +160,22 @@ class PatchService:
         payload: PatchApplyAndCheckRequest,
     ) -> PatchApplyAndCheckResponse:
         self._validate_check_profile_selection(payload.repo_id, payload.profile_ids)
-
-        patch_result = self.apply_patch(
-            PatchApplyRequest(
-                repo_id=payload.repo_id,
-                target_path=payload.target_path,
-                expected_base_sha256=payload.expected_base_sha256,
-                proposed_content=payload.proposed_content,
-            )
+        prepared_items = self._prepare_patch_apply_items(
+            payload.repo_id,
+            [
+                PatchApplyFile(
+                    target_path=payload.target_path,
+                    expected_base_sha256=payload.expected_base_sha256,
+                    proposed_content=payload.proposed_content,
+                )
+            ],
         )
+        patch_result = self._write_prepared_patches(prepared_items)[0]
         check_result = self.check_service.run_checks(
             CheckRunRequest(repo_id=payload.repo_id, profile_ids=payload.profile_ids)
         )
+        if check_result.status in {"failed", "error"}:
+            patch_result = self._rollback_patch_result(prepared_items[0], patch_result, check_result.summary)
         return PatchApplyAndCheckResponse(
             patch=patch_result,
             checks=check_result,
@@ -180,16 +186,14 @@ class PatchService:
         payload: PatchBatchApplyAndCheckRequest,
     ) -> PatchBatchApplyAndCheckResponse:
         self._validate_check_profile_selection(payload.repo_id, payload.profile_ids)
-
-        patch_result = self.apply_patch_batch(
-            PatchBatchApplyRequest(
-                repo_id=payload.repo_id,
-                items=payload.items,
-            )
-        )
+        prepared_items = self._prepare_patch_apply_items(payload.repo_id, payload.items)
+        batch_results = self._write_prepared_patches(prepared_items)
+        patch_result = self._build_batch_apply_response(payload.repo_id, batch_results)
         check_result = self.check_service.run_checks(
             CheckRunRequest(repo_id=payload.repo_id, profile_ids=payload.profile_ids)
         )
+        if check_result.status in {"failed", "error"}:
+            patch_result = self._rollback_batch_patch_response(prepared_items, patch_result, check_result.summary)
         return PatchBatchApplyAndCheckResponse(
             patch=patch_result,
             checks=check_result,
@@ -409,6 +413,13 @@ class PatchService:
                 "Failed to apply the requested patch set cleanly. Any earlier file writes were rolled back."
             ) from exc
 
+        if prepared_items:
+            logger.info(
+                "patch.apply.success repo_id=%s changed=%s noop=%s",
+                prepared_items[0].repo_id,
+                sum(1 for item in results if item.status == "applied"),
+                sum(1 for item in results if item.status == "noop"),
+            )
         return results
 
     def _build_batch_apply_response(
@@ -438,10 +449,107 @@ class PatchService:
             message=message,
             applied_count=applied_count,
             noop_count=noop_count,
+            rolled_back_count=0,
             target_paths=target_paths,
             combined_unified_diff=combined_unified_diff,
             results=results,
         )
+
+    def _rollback_patch_result(
+        self,
+        prepared_item: PreparedPatchApply,
+        result: PatchApplyResponse,
+        check_summary: str,
+    ) -> PatchApplyResponse:
+        if result.status != "applied":
+            return result
+
+        self._restore_prepared_patches([prepared_item])
+        logger.warning(
+            "patch.apply.rolled_back repo_id=%s target_path=%s reason=%s",
+            prepared_item.repo_id,
+            prepared_item.target_path,
+            check_summary,
+        )
+        return PatchApplyResponse(
+            repo_id=result.repo_id,
+            target_path=result.target_path,
+            status="rolled_back",
+            message=(
+                "The patch was rolled back because the selected checks did not pass. "
+                f"Check summary: {check_summary}"
+            ),
+            previous_sha256=result.previous_sha256,
+            written_sha256=prepared_item.current_hash,
+            written_line_count=self._count_lines(prepared_item.current_content),
+            unified_diff=result.unified_diff,
+        )
+
+    def _rollback_batch_patch_response(
+        self,
+        prepared_items: list[PreparedPatchApply],
+        response: PatchBatchApplyResponse,
+        check_summary: str,
+    ) -> PatchBatchApplyResponse:
+        applied_paths = {result.target_path for result in response.results if result.status == "applied"}
+        if not applied_paths:
+            return response
+
+        prepared_by_path = {item.target_path: item for item in prepared_items}
+        items_to_restore = [prepared_by_path[path] for path in applied_paths]
+        self._restore_prepared_patches(items_to_restore)
+
+        updated_results: list[PatchApplyResponse] = []
+        rolled_back_count = 0
+        for result in response.results:
+            if result.target_path not in applied_paths:
+                updated_results.append(result)
+                continue
+
+            prepared_item = prepared_by_path[result.target_path]
+            rolled_back_count += 1
+            updated_results.append(
+                PatchApplyResponse(
+                    repo_id=result.repo_id,
+                    target_path=result.target_path,
+                    status="rolled_back",
+                    message=(
+                        "This patch was rolled back because the selected checks did not pass. "
+                        f"Check summary: {check_summary}"
+                    ),
+                    previous_sha256=result.previous_sha256,
+                    written_sha256=prepared_item.current_hash,
+                    written_line_count=self._count_lines(prepared_item.current_content),
+                    unified_diff=result.unified_diff,
+                )
+            )
+
+        logger.warning(
+            "patch.apply_batch.rolled_back repo_id=%s rolled_back=%s reason=%s",
+            response.repo_id,
+            rolled_back_count,
+            check_summary,
+        )
+        return PatchBatchApplyResponse(
+            repo_id=response.repo_id,
+            status="rolled_back",
+            message=(
+                "Applied files were rolled back because the selected checks did not pass. "
+                f"Check summary: {check_summary}"
+            ),
+            applied_count=0,
+            noop_count=sum(1 for result in updated_results if result.status == "noop"),
+            rolled_back_count=rolled_back_count,
+            target_paths=response.target_paths,
+            combined_unified_diff=response.combined_unified_diff,
+            results=updated_results,
+        )
+
+    def _restore_prepared_patches(self, prepared_items: list[PreparedPatchApply]) -> None:
+        for prepared in reversed(prepared_items):
+            if not prepared.unified_diff:
+                continue
+            prepared.file_path.write_text(prepared.current_content, encoding="utf-8")
 
     def _build_prompt(
         self,

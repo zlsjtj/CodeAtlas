@@ -2,7 +2,9 @@ import os
 import re
 import shutil
 import subprocess
+import logging
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,6 +14,7 @@ from app.models.repository import Repository
 from app.schemas.repository import RepositoryCreate
 
 CLONE_NAME_SANITIZER = re.compile(r"[^A-Za-z0-9._-]+")
+logger = logging.getLogger(__name__)
 
 
 class RepositoryValidationError(ValueError):
@@ -75,6 +78,7 @@ class RepositoryService:
             root_path = str(candidate)
             derived_name = candidate.name
         else:
+            source_url = self._normalize_github_source_url(source_url)
             derived_name = self._derive_repository_name(source_url)
 
         repository = Repository(
@@ -92,6 +96,12 @@ class RepositoryService:
         try:
             if payload.source_type == "github":
                 clone_target = self._build_clone_target_dir(repository.id, name or derived_name)
+                logger.info(
+                    "repository.clone.start repo_id=%s source_url=%s target_dir=%s",
+                    repository.id,
+                    source_url,
+                    clone_target,
+                )
                 resolved_branch = self._clone_github_repository(
                     source_url=source_url or "",
                     target_dir=clone_target,
@@ -102,10 +112,22 @@ class RepositoryService:
 
             self.db.commit()
             self.db.refresh(repository)
+            logger.info(
+                "repository.create.success repo_id=%s source_type=%s root_path=%s",
+                repository.id,
+                repository.source_type,
+                repository.root_path,
+            )
         except Exception:
             self.db.rollback()
             if clone_target:
                 shutil.rmtree(clone_target, ignore_errors=True)
+            logger.exception(
+                "repository.create.failed source_type=%s source_url=%s root_path=%s",
+                payload.source_type,
+                source_url,
+                root_path,
+            )
             raise
         return repository
 
@@ -179,6 +201,31 @@ class RepositoryService:
             raise RepositoryValidationError(f"Failed to clone repository: {stderr}")
 
         return self._detect_checked_out_branch(target_dir)
+
+    def _normalize_github_source_url(self, source_url: str | None) -> str:
+        if not source_url:
+            raise RepositoryValidationError("source_url is required when source_type is 'github'.")
+
+        settings = get_settings()
+        parsed = urlparse(source_url)
+        hostname = (parsed.hostname or "").lower()
+        allowed_hosts = {host.lower() for host in settings.allowed_git_hosts}
+
+        if parsed.scheme != "https":
+            raise RepositoryValidationError("GitHub imports must use an https repository URL.")
+        if parsed.username or parsed.password:
+            raise RepositoryValidationError("GitHub imports do not accept embedded credentials in source_url.")
+        if hostname not in allowed_hosts:
+            raise RepositoryValidationError(
+                f"Only configured Git hosts are allowed for repository cloning: {', '.join(sorted(allowed_hosts))}."
+            )
+
+        path_segments = [segment for segment in parsed.path.split("/") if segment]
+        if len(path_segments) != 2:
+            raise RepositoryValidationError("GitHub source_url must point to a repository root like https://github.com/org/repo.")
+
+        normalized_path = "/" + "/".join(path_segments)
+        return urlunparse(("https", hostname, normalized_path, "", "", ""))
 
     def _detect_checked_out_branch(self, target_dir: Path) -> str | None:
         git_executable = shutil.which("git")
