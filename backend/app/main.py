@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.errors import register_exception_handlers
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.db import init_db
@@ -40,6 +41,7 @@ def create_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    register_exception_handlers(app)
     app.include_router(api_router, prefix=settings.api_prefix)
 
     @app.middleware("http")

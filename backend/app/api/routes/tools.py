@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.language import get_response_language
@@ -11,7 +11,6 @@ from app.schemas.tool import (
     SearchRepoRequest,
     ToolExecutionResponse,
 )
-from app.services.repository_service import RepositoryValidationError
 from app.tools.repository_tools import RepositoryTools
 
 router = APIRouter(prefix="/tools", tags=["tools"])
@@ -24,14 +23,9 @@ def list_repo_tree(
     response_language: ResponseLanguage | None = Depends(get_response_language),
 ) -> ToolExecutionResponse:
     tools = RepositoryTools(db)
-    try:
-        if payload.response_language is None:
-            payload.response_language = response_language
-        return tools.list_repo_tree(payload)
-    except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except (RepositoryValidationError, ValueError) as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if payload.response_language is None:
+        payload.response_language = response_language
+    return tools.list_repo_tree(payload)
 
 
 @router.post("/search", response_model=ToolExecutionResponse)
@@ -41,14 +35,9 @@ def search_repo(
     response_language: ResponseLanguage | None = Depends(get_response_language),
 ) -> ToolExecutionResponse:
     tools = RepositoryTools(db)
-    try:
-        if payload.response_language is None:
-            payload.response_language = response_language
-        return tools.search_repo(payload)
-    except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except (RepositoryValidationError, ValueError) as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if payload.response_language is None:
+        payload.response_language = response_language
+    return tools.search_repo(payload)
 
 
 @router.post("/read", response_model=ToolExecutionResponse)
@@ -58,14 +47,9 @@ def read_file(
     response_language: ResponseLanguage | None = Depends(get_response_language),
 ) -> ToolExecutionResponse:
     tools = RepositoryTools(db)
-    try:
-        if payload.response_language is None:
-            payload.response_language = response_language
-        return tools.read_file(payload)
-    except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except (RepositoryValidationError, ValueError, UnicodeDecodeError) as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if payload.response_language is None:
+        payload.response_language = response_language
+    return tools.read_file(payload)
 
 
 @router.post("/find-symbol", response_model=ToolExecutionResponse)
@@ -75,11 +59,6 @@ def find_symbol(
     response_language: ResponseLanguage | None = Depends(get_response_language),
 ) -> ToolExecutionResponse:
     tools = RepositoryTools(db)
-    try:
-        if payload.response_language is None:
-            payload.response_language = response_language
-        return tools.find_symbol(payload)
-    except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except (RepositoryValidationError, ValueError, UnicodeDecodeError) as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if payload.response_language is None:
+        payload.response_language = response_language
+    return tools.find_symbol(payload)

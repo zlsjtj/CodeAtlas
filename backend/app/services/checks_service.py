@@ -33,9 +33,13 @@ class CheckService:
         self.discovery = CheckProfileDiscovery()
         self.recommender = PathBasedCheckRecommendation()
 
-    def list_profiles(self, repo_id: int) -> CheckProfileListResponse:
-        repository = self.repository_service.get_repository(repo_id)
-        root = self.repository_service.resolve_repository_root(repository)
+    def list_profiles(
+        self,
+        repo_id: int,
+        response_language: ResponseLanguage | None = None,
+    ) -> CheckProfileListResponse:
+        repository = self.repository_service.get_repository(repo_id, response_language)
+        root = self.repository_service.resolve_repository_root(repository, response_language)
         profiles = self.discovery.discover(root)
         return CheckProfileListResponse(
             repo_id=repo_id,

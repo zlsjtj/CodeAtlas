@@ -16,6 +16,7 @@ from app.schemas.repository import (
     RepositoryTreeNode,
     RepositoryTreeResponse,
 )
+from app.services.repository_service import RepositoryValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +136,7 @@ class IndexingService:
         try:
             target.relative_to(root)
         except ValueError as exc:
-            raise ValueError(
+            raise RepositoryValidationError(
                 self._localized_message(
                     response_language,
                     "请求的目录树路径必须位于仓库根目录之内。",
@@ -144,7 +145,7 @@ class IndexingService:
             ) from exc
 
         if not target.exists() or not target.is_dir():
-            raise ValueError(
+            raise RepositoryValidationError(
                 self._localized_message(
                     response_language,
                     "请求的目录树路径不存在，或不是目录。",
