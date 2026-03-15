@@ -22,6 +22,7 @@ export type RepositoryTreeNode = ApiSchema<"RepositoryTreeNode">;
 export type RepositoryTreeResponse = ApiSchema<"RepositoryTreeResponse">;
 export type RepositoryCreatePayload = ApiSchema<"RepositoryCreate">;
 export type JobRun = ApiSchema<"JobRunRead">;
+export type JobRunListResponse = ApiSchema<"JobRunListResponse">;
 
 export type ChatCitation = ApiSchema<"ChatCitation">;
 export type ChatTraceStep = ApiSchema<"ChatTraceStep">;

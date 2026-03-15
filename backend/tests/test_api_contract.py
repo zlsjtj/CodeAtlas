@@ -15,6 +15,7 @@ def test_openapi_exposes_core_agent_contracts(client):
         "/api/patches/apply-and-checks",
         "/api/checks/recommend",
         "/api/repositories/{repo_id}/index-jobs",
+        "/api/jobs",
         "/api/jobs/{job_id}",
     ):
         assert path in paths
@@ -36,5 +37,6 @@ def test_openapi_exposes_core_agent_contracts(client):
     assert "response_language" in tool_search_properties
     assert "response_language" in tool_read_properties
     assert "JobRunRead" in schemas
+    assert "JobRunListResponse" in schemas
     assert "RepositoryImportJobResponse" in schemas
     assert "repository_clone" in schemas["JobRunRead"]["properties"]["job_type"]["enum"]

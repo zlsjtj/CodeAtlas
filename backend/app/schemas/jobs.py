@@ -25,3 +25,7 @@ class JobRunRead(BaseModel):
     started_at: datetime | None
     finished_at: datetime | None
     updated_at: datetime
+
+
+class JobRunListResponse(BaseModel):
+    items: list[JobRunRead]

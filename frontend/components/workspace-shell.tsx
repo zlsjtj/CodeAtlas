@@ -6,6 +6,7 @@ import { ChecksPanel } from "@/components/checks/checks-panel";
 import { ChatHistoryPanel } from "@/components/chat/chat-history-panel";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { CitationPanel } from "@/components/citations/citation-panel";
+import { JobActivityPanel } from "@/components/jobs/job-activity-panel";
 import { PatchDraftPanel } from "@/components/patches/patch-draft-panel";
 import { RepositoryImportForm } from "@/components/repositories/repository-import-form";
 import { RepositoryList } from "@/components/repositories/repository-list";
@@ -195,6 +196,11 @@ export function WorkspaceShell() {
             onSelect={repositoriesWorkspace.setSelectedRepoId}
             repositories={repositoriesWorkspace.repositories}
             selectedRepoId={repositoriesWorkspace.selectedRepoId}
+          />
+          <JobActivityPanel
+            jobs={repositoriesWorkspace.recentJobs}
+            locale={locale}
+            repositories={repositoriesWorkspace.repositories}
           />
           {hasChatHistory ? (
             <ChatHistoryPanel

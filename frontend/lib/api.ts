@@ -18,6 +18,7 @@ import type {
   ChatAskResponse,
   HealthResponse,
   JobRun,
+  JobRunListResponse,
   MetaResponse,
   PatchDraftPayload,
   PatchDraftResponse,
@@ -116,6 +117,16 @@ export function createRepositoryIndexJob(repoId: number, locale?: WorkspaceLocal
 
 export function fetchJob(jobId: number, locale?: WorkspaceLocale) {
   return request<JobRun>(`/api/jobs/${jobId}`, {
+    locale,
+  });
+}
+
+export function listJobs(repoId?: number, locale?: WorkspaceLocale) {
+  const params = new URLSearchParams({ limit: "12" });
+  if (repoId) {
+    params.set("repo_id", String(repoId));
+  }
+  return request<JobRunListResponse>(`/api/jobs?${params.toString()}`, {
     locale,
   });
 }

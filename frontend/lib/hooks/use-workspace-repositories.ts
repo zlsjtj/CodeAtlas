@@ -9,11 +9,13 @@ import {
   fetchJob,
   fetchHealth,
   fetchMeta,
+  listJobs,
   listRepositories,
 } from "@/lib/api";
 import type {
   HealthResponse,
   JobRun,
+  JobRunListResponse,
   MetaResponse,
   RepositoryCreatePayload,
   RepositoryRecord,
@@ -43,6 +45,7 @@ export function useWorkspaceRepositories({
   const [indexingRepoId, setIndexingRepoId] = useState<number | null>(null);
   const [activeImportJob, setActiveImportJob] = useState<JobRun | null>(null);
   const [activeIndexJob, setActiveIndexJob] = useState<JobRun | null>(null);
+  const [recentJobs, setRecentJobs] = useState<JobRun[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -52,10 +55,11 @@ export function useWorkspaceRepositories({
       try {
         setIsLoading(true);
         setError(null);
-        const [healthResponse, metaResponse, repositoriesResponse] = await Promise.all([
+        const [healthResponse, metaResponse, repositoriesResponse, jobsResponse] = await Promise.all([
           fetchHealth(),
           fetchMeta(),
           listRepositories(),
+          listJobs(undefined, locale),
         ]);
 
         if (!active) {
@@ -66,6 +70,7 @@ export function useWorkspaceRepositories({
           setHealth(healthResponse);
           setMeta(metaResponse);
           setRepositories(repositoriesResponse.items);
+          setRecentJobs(jobsResponse.items);
         });
       } catch (loadError) {
         if (!active) {
@@ -112,6 +117,14 @@ export function useWorkspaceRepositories({
     return repositoriesResponse.items;
   }
 
+  async function refreshRecentJobs(repoId?: number | null) {
+    const jobsResponse: JobRunListResponse = await listJobs(repoId ?? undefined, locale);
+    startTransition(() => {
+      setRecentJobs(jobsResponse.items);
+    });
+    return jobsResponse.items;
+  }
+
   async function handleRepositorySubmit(payload: RepositoryCreatePayload) {
     setIsSubmitting(true);
     setError(null);
@@ -122,6 +135,7 @@ export function useWorkspaceRepositories({
         const importResponse = await createRepositoryImportJob(payload, locale);
         startTransition(() => {
           setRepositories((current) => [importResponse.repository, ...current]);
+          setRecentJobs((current) => [importResponse.job, ...current].slice(0, 12));
         });
         setSelectedRepoId(importResponse.repository.id);
         setImportingRepoId(importResponse.repository.id);
@@ -161,11 +175,13 @@ export function useWorkspaceRepositories({
 
         if (nextJob.status === "succeeded") {
           await refreshRepositories();
+          await refreshRecentJobs(importingRepoId);
           setStatusMessage(nextJob.message ?? copy.feedback.repositoryRegistered("GitHub"));
           setImportingRepoId(null);
           setActiveImportJob(null);
         } else if (nextJob.status === "failed") {
           await refreshRepositories();
+          await refreshRecentJobs(importingRepoId);
           setError(nextJob.message ?? copy.feedback.registerRepository);
           setImportingRepoId(null);
           setActiveImportJob(null);
@@ -213,10 +229,12 @@ export function useWorkspaceRepositories({
 
         if (nextJob.status === "succeeded") {
           await refreshRepositories();
+          await refreshRecentJobs(indexingRepoId);
           setStatusMessage(copy.feedback.indexCompleted(nextJob.file_count, nextJob.chunk_count));
           setIndexingRepoId(null);
           setActiveIndexJob(null);
         } else if (nextJob.status === "failed") {
+          await refreshRecentJobs(indexingRepoId);
           setError(nextJob.message ?? copy.feedback.indexRepository);
           setIndexingRepoId(null);
           setActiveIndexJob(null);
@@ -255,6 +273,9 @@ export function useWorkspaceRepositories({
     try {
       const job = await createRepositoryIndexJob(repoId, locale);
       setActiveIndexJob(job);
+      startTransition(() => {
+        setRecentJobs((current) => [job, ...current].slice(0, 12));
+      });
       setStatusMessage(job.message ?? copy.repositoryList.indexing);
     } catch (indexError) {
       setError(toErrorMessage(indexError, copy.feedback.indexRepository));
@@ -274,6 +295,7 @@ export function useWorkspaceRepositories({
     health,
     meta,
     repositories,
+    recentJobs,
     readyRepositories,
     selectedRepoId,
     selectedRepository,

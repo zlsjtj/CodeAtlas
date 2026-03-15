@@ -65,6 +65,13 @@ type LocaleCopy = {
     indexing: string;
     triggerIndex: string;
   };
+  jobs: {
+    title: string;
+    description: string;
+    empty: string;
+    repositoryPrefix: string;
+    noMessage: string;
+  };
   chatHistory: {
     title: string;
     description: string;
@@ -263,6 +270,13 @@ const zhCN: LocaleCopy = {
     cloning: "克隆中...",
     indexing: "索引中...",
     triggerIndex: "开始索引",
+  },
+  jobs: {
+    title: "最近任务",
+    description: "显示最近的后台克隆和索引任务，便于确认仓库当前正在处理什么。",
+    empty: "还没有后台任务记录。",
+    repositoryPrefix: "仓库",
+    noMessage: "暂无附加说明。",
   },
   chatHistory: {
     title: "最近会话",
@@ -469,6 +483,13 @@ const en: LocaleCopy = {
     cloning: "Cloning...",
     indexing: "Indexing...",
     triggerIndex: "Start indexing",
+  },
+  jobs: {
+    title: "Recent jobs",
+    description: "Shows recent background clone and index jobs so you can see what the workspace is processing.",
+    empty: "No background jobs yet.",
+    repositoryPrefix: "Repository",
+    noMessage: "No additional message.",
   },
   chatHistory: {
     title: "Recent sessions",

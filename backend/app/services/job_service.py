@@ -4,13 +4,14 @@ import logging
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_session_factory, utc_now
 from app.models.job_run import JobRun
 from app.models.repository import Repository
 from app.schemas.common import ResponseLanguage
-from app.schemas.jobs import JobRunRead
+from app.schemas.jobs import JobRunListResponse, JobRunRead
 from app.schemas.repository import RepositoryCreate, RepositoryImportJobResponse
 from app.services.indexing_service import IndexingService
 from app.services.repository_service import RepositoryService, RepositoryValidationError
@@ -77,6 +78,13 @@ class JobService:
         if job is None:
             raise LookupError(f"Job {job_id} was not found.")
         return JobRunRead.model_validate(job)
+
+    def list_jobs(self, repo_id: int | None = None, limit: int = 12) -> JobRunListResponse:
+        query = select(JobRun).order_by(JobRun.created_at.desc()).limit(limit)
+        if repo_id is not None:
+            query = query.where(JobRun.repo_id == repo_id)
+        jobs = list(self.db.scalars(query).all())
+        return JobRunListResponse(items=[JobRunRead.model_validate(job) for job in jobs])
 
     def _submit_job(self, job_id: int, response_language: ResponseLanguage | None) -> None:
         self._executor.submit(self._run_repository_index_job, job_id, response_language)
