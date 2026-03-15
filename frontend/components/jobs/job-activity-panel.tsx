@@ -1,6 +1,6 @@
 import type { JobRun, RepositoryRecord } from "@/lib/types";
 import { getWorkspaceCopy, type WorkspaceLocale } from "@/lib/workspace-i18n";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type JobActivityPanelProps = {
   jobs: JobRun[];
@@ -70,6 +70,18 @@ export function JobActivityPanel({
 }: JobActivityPanelProps) {
   const copy = getWorkspaceCopy(locale);
   const [filter, setFilter] = useState<JobFilter>("all");
+  const [timeTick, setTimeTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTimeTick(Date.now());
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const filteredJobs = useMemo(() => {
     if (filter === "current") {
       if (!selectedRepoId) {
@@ -81,7 +93,7 @@ export function JobActivityPanel({
       return jobs.filter((job) => job.status === "failed");
     }
     return jobs;
-  }, [filter, jobs, selectedRepoId]);
+  }, [filter, jobs, selectedRepoId, timeTick]);
 
   return (
     <section className="panel-card">
