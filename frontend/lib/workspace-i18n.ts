@@ -71,6 +71,9 @@ type LocaleCopy = {
     empty: string;
     repositoryPrefix: string;
     noMessage: string;
+    showAll: string;
+    showCurrentRepo: string;
+    showFailed: string;
     retry: string;
     retrying: string;
     retryQueued: string;
@@ -280,6 +283,9 @@ const zhCN: LocaleCopy = {
     empty: "还没有后台任务记录。",
     repositoryPrefix: "仓库",
     noMessage: "暂无附加说明。",
+    showAll: "全部",
+    showCurrentRepo: "当前仓库",
+    showFailed: "仅失败",
     retry: "重试",
     retrying: "重试中...",
     retryQueued: "已加入重试队列。",
@@ -496,6 +502,9 @@ const en: LocaleCopy = {
     empty: "No background jobs yet.",
     repositoryPrefix: "Repository",
     noMessage: "No additional message.",
+    showAll: "All",
+    showCurrentRepo: "Current repo",
+    showFailed: "Failed only",
     retry: "Retry",
     retrying: "Retrying...",
     retryQueued: "Retry job queued.",

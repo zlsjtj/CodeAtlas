@@ -590,6 +590,23 @@ select {
   background: rgba(255, 255, 255, 0.55);
 }
 
+.job-filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.compact-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+}
+
+.compact-button.is-active-filter {
+  background: rgba(31, 93, 80, 0.1);
+  color: var(--accent);
+}
+
 .repo-header {
   display: flex;
   align-items: center;

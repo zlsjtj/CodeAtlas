@@ -203,6 +203,7 @@ export function WorkspaceShell() {
             onRetry={repositoriesWorkspace.handleRetryJob}
             repositories={repositoriesWorkspace.repositories}
             retryingJobId={repositoriesWorkspace.retryingJobId}
+            selectedRepoId={repositoriesWorkspace.selectedRepoId}
           />
           {hasChatHistory ? (
             <ChatHistoryPanel

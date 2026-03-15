@@ -1,13 +1,17 @@
 import type { JobRun, RepositoryRecord } from "@/lib/types";
 import { getWorkspaceCopy, type WorkspaceLocale } from "@/lib/workspace-i18n";
+import { useMemo, useState } from "react";
 
 type JobActivityPanelProps = {
   jobs: JobRun[];
   repositories: RepositoryRecord[];
   locale: WorkspaceLocale;
   retryingJobId: number | null;
+  selectedRepoId: number | null;
   onRetry: (jobId: number) => Promise<void> | void;
 };
+
+type JobFilter = "all" | "current" | "failed";
 
 function formatJobStatus(locale: WorkspaceLocale, status: JobRun["status"]): string {
   if (locale === "zh-CN") {
@@ -34,21 +38,62 @@ export function JobActivityPanel({
   repositories,
   locale,
   retryingJobId,
+  selectedRepoId,
   onRetry,
 }: JobActivityPanelProps) {
   const copy = getWorkspaceCopy(locale);
+  const [filter, setFilter] = useState<JobFilter>("all");
+  const filteredJobs = useMemo(() => {
+    if (filter === "current") {
+      if (!selectedRepoId) {
+        return [];
+      }
+      return jobs.filter((job) => job.repo_id === selectedRepoId);
+    }
+    if (filter === "failed") {
+      return jobs.filter((job) => job.status === "failed");
+    }
+    return jobs;
+  }, [filter, jobs, selectedRepoId]);
 
   return (
     <section className="panel-card">
-      <h2 className="panel-title">{copy.jobs.title}</h2>
-      <p className="panel-copy">{copy.jobs.description}</p>
-      {jobs.length === 0 ? (
+      <div className="repo-header">
+        <div>
+          <h2 className="panel-title">{copy.jobs.title}</h2>
+          <p className="panel-copy">{copy.jobs.description}</p>
+        </div>
+        <div className="job-filter-row">
+          <button
+            className={`button-secondary compact-button ${filter === "all" ? "is-active-filter" : ""}`.trim()}
+            onClick={() => setFilter("all")}
+            type="button"
+          >
+            {copy.jobs.showAll}
+          </button>
+          <button
+            className={`button-secondary compact-button ${filter === "current" ? "is-active-filter" : ""}`.trim()}
+            onClick={() => setFilter("current")}
+            type="button"
+          >
+            {copy.jobs.showCurrentRepo}
+          </button>
+          <button
+            className={`button-secondary compact-button ${filter === "failed" ? "is-active-filter" : ""}`.trim()}
+            onClick={() => setFilter("failed")}
+            type="button"
+          >
+            {copy.jobs.showFailed}
+          </button>
+        </div>
+      </div>
+      {filteredJobs.length === 0 ? (
         <div className="placeholder-card">
           <div className="placeholder-copy">{copy.jobs.empty}</div>
         </div>
       ) : (
         <div className="job-list">
-          {jobs.map((job) => {
+          {filteredJobs.map((job) => {
             const repository = repositories.find((item) => item.id === job.repo_id);
             return (
               <article className="job-item" key={job.id}>
