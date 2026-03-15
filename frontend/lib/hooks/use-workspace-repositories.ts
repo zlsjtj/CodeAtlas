@@ -3,14 +3,16 @@
 import { startTransition, useEffect, useState } from "react";
 
 import {
+  createRepositoryIndexJob,
+  fetchJob,
   createRepository,
   fetchHealth,
   fetchMeta,
-  indexRepository,
   listRepositories,
 } from "@/lib/api";
 import type {
   HealthResponse,
+  JobRun,
   MetaResponse,
   RepositoryCreatePayload,
   RepositoryRecord,
@@ -37,6 +39,7 @@ export function useWorkspaceRepositories({
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [indexingRepoId, setIndexingRepoId] = useState<number | null>(null);
+  const [activeIndexJob, setActiveIndexJob] = useState<JobRun | null>(null);
   const [selectedRepoId, setSelectedRepoId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -124,19 +127,73 @@ export function useWorkspaceRepositories({
     }
   }
 
+  useEffect(() => {
+    if (!activeIndexJob || !indexingRepoId) {
+      return;
+    }
+    if (activeIndexJob.status === "succeeded" || activeIndexJob.status === "failed") {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const nextJob = await fetchJob(activeIndexJob.id, locale);
+        if (cancelled) {
+          return;
+        }
+        setActiveIndexJob(nextJob);
+
+        if (nextJob.status === "succeeded") {
+          await refreshRepositories();
+          setStatusMessage(copy.feedback.indexCompleted(nextJob.file_count, nextJob.chunk_count));
+          setIndexingRepoId(null);
+          setActiveIndexJob(null);
+        } else if (nextJob.status === "failed") {
+          setError(nextJob.message ?? copy.feedback.indexRepository);
+          setIndexingRepoId(null);
+          setActiveIndexJob(null);
+        }
+      } catch (jobError) {
+        if (cancelled) {
+          return;
+        }
+        setError(toErrorMessage(jobError, copy.feedback.indexRepository));
+        setIndexingRepoId(null);
+        setActiveIndexJob(null);
+      }
+    }, 1200);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    activeIndexJob,
+    copy.feedback.indexCompleted,
+    copy.feedback.indexRepository,
+    indexingRepoId,
+    locale,
+    refreshRepositories,
+    setError,
+    setStatusMessage,
+  ]);
+
   async function handleIndexRepository(repoId: number) {
     setIndexingRepoId(repoId);
+    setActiveIndexJob(null);
     setError(null);
     setStatusMessage(null);
 
     try {
-      const summary = await indexRepository(repoId, locale);
-      await refreshRepositories();
-      setStatusMessage(copy.feedback.indexCompleted(summary.file_count, summary.chunk_count));
+      const job = await createRepositoryIndexJob(repoId, locale);
+      setActiveIndexJob(job);
+      setStatusMessage(job.message ?? copy.repositoryList.indexing);
     } catch (indexError) {
       setError(toErrorMessage(indexError, copy.feedback.indexRepository));
-    } finally {
       setIndexingRepoId(null);
+    } finally {
+      // Polling lifecycle owns cleanup after the job starts.
     }
   }
 

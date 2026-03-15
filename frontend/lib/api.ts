@@ -17,6 +17,7 @@ import type {
   ChatAskPayload,
   ChatAskResponse,
   HealthResponse,
+  JobRun,
   MetaResponse,
   PatchDraftPayload,
   PatchDraftResponse,
@@ -91,6 +92,19 @@ export function indexRepository(repoId: number, locale?: WorkspaceLocale) {
   return request<RepositoryIndexResponse>(`/api/repositories/${repoId}/index`, {
     locale,
     method: "POST",
+  });
+}
+
+export function createRepositoryIndexJob(repoId: number, locale?: WorkspaceLocale) {
+  return request<JobRun>(`/api/repositories/${repoId}/index-jobs`, {
+    locale,
+    method: "POST",
+  });
+}
+
+export function fetchJob(jobId: number, locale?: WorkspaceLocale) {
+  return request<JobRun>(`/api/jobs/${jobId}`, {
+    locale,
   });
 }
 
