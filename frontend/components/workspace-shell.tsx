@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ChecksPanel } from "@/components/checks/checks-panel";
 import { ChatHistoryPanel } from "@/components/chat/chat-history-panel";
@@ -90,6 +90,10 @@ export function WorkspaceShell() {
   ];
 
   const activeTab = tabs.find((tab) => tab.id === activeView) ?? tabs[0];
+  const toastCopy =
+    locale === "zh-CN"
+      ? { close: "关闭提示" }
+      : { close: "Dismiss notification" };
   const drawerCopy =
     locale === "zh-CN"
       ? { open: "仓库与任务", close: "关闭侧栏" }
@@ -190,6 +194,34 @@ export function WorkspaceShell() {
     };
   })();
 
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setError(null);
+    }, 5200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [error]);
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setStatusMessage(null);
+    }, 3600);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [statusMessage]);
+
   return (
     <main className="page-shell page-shell--workspace">
       <section className="workspace-topbar">
@@ -235,8 +267,36 @@ export function WorkspaceShell() {
         </div>
       </section>
 
-      {error ? <div className="error-banner">{error}</div> : null}
-      {statusMessage ? <div className="success-banner">{statusMessage}</div> : null}
+      {error ? (
+        <div className="workspace-toast-stack" role="status">
+          <div className="error-banner toast-banner">
+            <div>{error}</div>
+            <button
+              aria-label={toastCopy.close}
+              className="toast-close"
+              onClick={() => setError(null)}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {statusMessage ? (
+        <div className="workspace-toast-stack" role="status">
+          <div className="success-banner toast-banner">
+            <div>{statusMessage}</div>
+            <button
+              aria-label={toastCopy.close}
+              className="toast-close"
+              onClick={() => setStatusMessage(null)}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <section className="workspace-layout">
         <button

@@ -845,6 +845,30 @@ select {
   color: var(--accent);
 }
 
+.workspace-toast-stack {
+  position: sticky;
+  top: 14px;
+  z-index: 18;
+}
+
+.toast-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.toast-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(36, 28, 18, 0.08);
+  color: inherit;
+  cursor: pointer;
+}
+
 .placeholder-list {
   display: grid;
   gap: 12px;
