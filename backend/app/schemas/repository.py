@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 from app.schemas.jobs import JobRunRead
 
 RepositorySourceType = Literal["local", "github"]
-RepositoryStatus = Literal["pending", "ready", "indexing", "failed"]
+RepositoryStatus = Literal["cloning", "pending", "ready", "indexing", "failed"]
 
 
 class RepositoryCreate(BaseModel):

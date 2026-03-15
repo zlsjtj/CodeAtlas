@@ -86,9 +86,11 @@ export function RepositoryList({
                   onClick={() => onIndex(repository.id)}
                   type="button"
                 >
-                  {!repository.root_path
+                  {importingRepoId === repository.id || repository.status === "cloning"
+                    ? copy.repositoryList.cloning
+                    : !repository.root_path
                     ? copy.repositoryList.missingWorkspace
-                    : importingRepoId === repository.id || indexingRepoId === repository.id
+                    : indexingRepoId === repository.id
                       ? copy.repositoryList.indexing
                       : copy.repositoryList.triggerIndex}
                 </button>

@@ -61,6 +61,7 @@ def test_create_github_import_job_and_query_status(client, monkeypatch):
     payload = response.json()
     assert payload["repository"]["name"] == "async-demo-repo"
     assert payload["repository"]["root_path"] is None
+    assert payload["repository"]["status"] == "cloning"
     assert payload["job"]["job_type"] == "repository_clone"
     assert payload["job"]["status"] == "queued"
 

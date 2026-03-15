@@ -61,6 +61,7 @@ type LocaleCopy = {
     currentRepository: string;
     selectRepository: string;
     missingWorkspace: string;
+    cloning: string;
     indexing: string;
     triggerIndex: string;
   };
@@ -259,6 +260,7 @@ const zhCN: LocaleCopy = {
     currentRepository: "当前仓库",
     selectRepository: "设为当前仓库",
     missingWorkspace: "缺少工作区",
+    cloning: "克隆中...",
     indexing: "索引中...",
     triggerIndex: "开始索引",
   },
@@ -464,6 +466,7 @@ const en: LocaleCopy = {
     currentRepository: "Current repository",
     selectRepository: "Use as current repository",
     missingWorkspace: "Missing workspace",
+    cloning: "Cloning...",
     indexing: "Indexing...",
     triggerIndex: "Start indexing",
   },
@@ -646,6 +649,7 @@ const featureLabels: Record<string, Record<WorkspaceLocale, string>> = {
 };
 
 const repositoryStatusLabels: Record<RepositoryStatus, Record<WorkspaceLocale, string>> = {
+  cloning: { "zh-CN": "克隆中", en: "Cloning" },
   pending: { "zh-CN": "待处理", en: "Pending" },
   ready: { "zh-CN": "可用", en: "Ready" },
   indexing: { "zh-CN": "索引中", en: "Indexing" },

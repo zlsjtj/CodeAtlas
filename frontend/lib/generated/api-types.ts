@@ -1014,7 +1014,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "ready" | "indexing" | "failed";
+            status: "cloning" | "pending" | "ready" | "indexing" | "failed";
             /** Message */
             message: string;
             /**
@@ -1041,7 +1041,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "ready" | "indexing" | "failed";
+            status: "cloning" | "pending" | "ready" | "indexing" | "failed";
             /** Primary Language */
             primary_language: string | null;
             /** File Count */
@@ -1082,7 +1082,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "ready" | "indexing" | "failed";
+            status: "cloning" | "pending" | "ready" | "indexing" | "failed";
             /**
              * Created At
              * Format: date-time

@@ -213,7 +213,7 @@ class RepositoryService:
             root_path=None,
             default_branch=payload.default_branch,
             primary_language=None,
-            status="pending",
+            status="cloning",
         )
         self.db.add(repository)
         self.db.commit()

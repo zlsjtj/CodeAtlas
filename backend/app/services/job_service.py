@@ -170,6 +170,11 @@ class JobService:
                     )
                 )
 
+            repository.status = "cloning"
+            session.add(repository)
+            session.commit()
+            session.refresh(repository)
+
             clone_target = repository_service._build_clone_target_dir(repository.id, repository.name)
             logger.info(
                 "jobs.repository_clone.start job_id=%s repo_id=%s source_url=%s target_dir=%s",
