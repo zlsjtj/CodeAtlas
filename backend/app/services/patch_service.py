@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.agents.patch_draft_agent import PatchDraftFinalOutput, build_patch_draft_agent
 from app.core.config import get_settings
 from app.schemas.checks import CheckRunRequest
+from app.schemas.common import ResponseLanguage
 from app.schemas.patch import (
     PatchApplyAndCheckRequest,
     PatchApplyAndCheckResponse,
@@ -74,6 +75,7 @@ class PatchService:
             target_path=payload.target_path,
             instruction=payload.instruction,
             model=settings.openai_model,
+            response_language=payload.response_language,
         )
         return PatchDraftResponse(
             session_id=session_id,
@@ -84,7 +86,10 @@ class PatchService:
     async def draft_patch_batch(self, payload: PatchBatchDraftRequest) -> PatchBatchDraftResponse:
         session_id = payload.session_id or uuid4().hex
         settings, repository = self._prepare_patch_drafting(payload.repo_id)
-        target_paths, batch_warnings = self._normalize_target_paths(payload.target_paths)
+        target_paths, batch_warnings = self._normalize_target_paths(
+            payload.target_paths,
+            payload.response_language,
+        )
 
         started_at = perf_counter()
         items: list[PatchDraftFile] = []
@@ -95,6 +100,7 @@ class PatchService:
                     target_path=target_path,
                     instruction=payload.instruction,
                     model=settings.openai_model,
+                    response_language=payload.response_language,
                 )
             )
         latency_ms = int((perf_counter() - started_at) * 1000)
@@ -112,16 +118,21 @@ class PatchService:
         diff_free_count = sum(1 for item in items if not item.unified_diff)
         if diff_free_count:
             warnings.append(
-                f"{diff_free_count} file(s) did not produce a textual diff. Review the item-level warnings before applying anything."
+                self._localized_message(
+                    payload.response_language,
+                    f"有 {diff_free_count} 个文件没有产生可见文本差异。应用前请先查看各文件自己的 warning。",
+                    f"{diff_free_count} file(s) did not produce a textual diff. Review the item-level warnings before applying anything.",
+                )
             )
 
         return PatchBatchDraftResponse(
             session_id=session_id,
             repo_id=payload.repo_id,
             target_paths=target_paths,
-            summary=(
-                f"Generated patch drafts for {changed_file_count} file(s). "
-                "Review the grouped diffs first, then apply any accepted changes one file at a time."
+            summary=self._localized_message(
+                payload.response_language,
+                f"已为 {changed_file_count} 个文件生成改动草案。建议先查看合并 diff，再决定逐步应用哪些改动。",
+                f"Generated patch drafts for {changed_file_count} file(s). Review the grouped diffs first, then apply accepted changes one file at a time.",
             ),
             warnings=warnings,
             changed_file_count=changed_file_count,
@@ -211,8 +222,17 @@ class PatchService:
 
         return settings, repository
 
-    async def _run_agent(self, *, prompt: str, model: str) -> tuple[PatchDraftFinalOutput, str]:
-        agent = build_patch_draft_agent(model)
+    async def _run_agent(
+        self,
+        *,
+        prompt: str,
+        model: str,
+        response_language: ResponseLanguage | None,
+    ) -> tuple[PatchDraftFinalOutput, str]:
+        agent = build_patch_draft_agent(
+            model,
+            preferred_response_language=response_language,
+        )
         result = await Runner.run(agent, prompt)
         final_output = result.final_output
         if not isinstance(final_output, PatchDraftFinalOutput):
@@ -228,6 +248,7 @@ class PatchService:
         target_path: str,
         instruction: str,
         model: str,
+        response_language: ResponseLanguage | None,
     ) -> PatchDraftFile:
         normalized_target_path = target_path.strip().strip("/")
         _, original_content = self._read_target_file_from_repository(repository, normalized_target_path)
@@ -236,10 +257,15 @@ class PatchService:
             target_path=normalized_target_path,
             instruction=instruction,
             original_content=original_content,
+            response_language=response_language,
         )
 
         started_at = perf_counter()
-        final_output, agent_name = await self._run_agent(prompt=prompt, model=model)
+        final_output, agent_name = await self._run_agent(
+            prompt=prompt,
+            model=model,
+            response_language=response_language,
+        )
         latency_ms = int((perf_counter() - started_at) * 1000)
 
         proposed_content = self._normalize_content(final_output.proposed_content)
@@ -253,7 +279,13 @@ class PatchService:
 
         warnings = list(final_output.warnings)
         if not unified_diff:
-            warnings.append("The draft did not introduce a textual diff. Refine the instruction if you expected a code change.")
+            warnings.append(
+                self._localized_message(
+                    response_language,
+                    "这次草案没有产生文本差异。如果你原本预期会有代码改动，请把改动意图写得更具体一些。",
+                    "The draft did not introduce a textual diff. Refine the instruction if you expected a code change.",
+                )
+            )
 
         return PatchDraftFile(
             target_path=normalized_target_path,
@@ -299,7 +331,11 @@ class PatchService:
 
         return file_path, content
 
-    def _normalize_target_paths(self, target_paths: list[str]) -> tuple[list[str], list[str]]:
+    def _normalize_target_paths(
+        self,
+        target_paths: list[str],
+        response_language: ResponseLanguage | None,
+    ) -> tuple[list[str], list[str]]:
         normalized_paths: list[str] = []
         warnings: list[str] = []
         seen_paths: set[str] = set()
@@ -309,7 +345,13 @@ class PatchService:
             if not normalized_target_path:
                 continue
             if normalized_target_path in seen_paths:
-                warnings.append(f"Skipped duplicate target path: {normalized_target_path}.")
+                warnings.append(
+                    self._localized_message(
+                        response_language,
+                        f"已跳过重复的目标路径：{normalized_target_path}。",
+                        f"Skipped duplicate target path: {normalized_target_path}.",
+                    )
+                )
                 continue
             seen_paths.add(normalized_target_path)
             normalized_paths.append(normalized_target_path)
@@ -558,16 +600,43 @@ class PatchService:
         target_path: str,
         instruction: str,
         original_content: str,
+        response_language: ResponseLanguage | None,
     ) -> str:
-        return (
-            f"Repository name: {repo_name}\n"
-            f"Target file: {target_path.strip().strip('/')}\n"
-            f"Instruction: {instruction}\n\n"
-            "Current file content:\n"
-            "```text\n"
-            f"{original_content}\n"
-            "```"
+        preferred_language = self._describe_response_language(response_language)
+        prompt_parts = [
+            f"Repository name: {repo_name}",
+            f"Target file: {target_path.strip().strip('/')}",
+        ]
+        if preferred_language:
+            prompt_parts.append(f"Preferred response language: {preferred_language}")
+        prompt_parts.append(f"Instruction: {instruction}")
+        prompt_parts.extend(
+            [
+                "",
+                "Current file content:",
+                "```text",
+                f"{original_content}",
+                "```",
+            ]
         )
+        return "\n".join(prompt_parts)
+
+    def _describe_response_language(self, response_language: ResponseLanguage | None) -> str | None:
+        if response_language == ResponseLanguage.ZH_CN:
+            return "Simplified Chinese"
+        if response_language == ResponseLanguage.EN:
+            return "English"
+        return None
+
+    def _localized_message(
+        self,
+        response_language: ResponseLanguage | None,
+        zh_cn_message: str,
+        en_message: str,
+    ) -> str:
+        if response_language == ResponseLanguage.ZH_CN:
+            return zh_cn_message
+        return en_message
 
     def _build_unified_diff(
         self,

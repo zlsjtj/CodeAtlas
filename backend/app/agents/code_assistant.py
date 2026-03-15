@@ -7,6 +7,7 @@ from agents import Agent, ModelSettings, RunContextWrapper, function_tool
 from pydantic import BaseModel, Field
 
 from app.schemas.chat import ChatCitation
+from app.schemas.common import ResponseLanguage
 from app.schemas.tool import (
     FindSymbolRequest,
     ListRepoTreeRequest,
@@ -27,10 +28,7 @@ class CodeAssistantRunContext:
 
 class CodeAssistantFinalOutput(BaseModel):
     answer: str = Field(
-        description=(
-            "A concise repository answer in the user's language. "
-            "Use short markdown sections such as 结论, 依据, 风险, 下一步建议 when helpful."
-        )
+        description="A concise repository answer with evidence-based conclusions and short markdown structure when helpful."
     )
     citations: list[ChatCitation] = Field(
         default_factory=list,
@@ -108,26 +106,41 @@ def find_symbol(
     return result.model_dump(mode="json")
 
 
-def build_code_assistant_agent(model: str) -> Agent[CodeAssistantRunContext]:
+def build_code_assistant_agent(
+    model: str,
+    *,
+    preferred_response_language: ResponseLanguage | None = None,
+) -> Agent[CodeAssistantRunContext]:
+    language_instruction = _build_language_instruction(preferred_response_language)
     return Agent[CodeAssistantRunContext](
         name="CodeAssistant",
         model=model,
         instructions=(
             "You are a code repository assistant. "
-            "You answer questions about the selected repository only. "
+            "Answer questions about the selected repository only. "
             "Always use at least one tool before answering. "
             "Prefer search_repo first, then read_file or find_symbol when you need confirmation. "
             "Never invent a file path, symbol, or line number. "
-            "If the evidence is incomplete, say you are uncertain. "
-            "Reply in the same language as the user unless they explicitly ask otherwise. "
+            "If the evidence is incomplete, say that you are uncertain. "
+            f"{language_instruction} "
             "Keep the final answer concise but structured. "
-            "The answer field should usually include short markdown sections such as 结论, 依据, 风险, 下一步建议 when helpful. "
-            "The citations list must reference only evidence you observed from tools."
+            "The answer field can use short markdown sections such as conclusion, evidence, risk, and next steps when helpful. "
+            "The citations list must reference only evidence observed from tools."
         ),
         tools=[list_repo_tree, search_repo, read_file, find_symbol],
         output_type=CodeAssistantFinalOutput,
         model_settings=ModelSettings(tool_choice="required"),
     )
+
+
+def _build_language_instruction(preferred_response_language: ResponseLanguage | None) -> str:
+    if preferred_response_language == ResponseLanguage.ZH_CN:
+        return (
+            "Default to Simplified Chinese for the answer and citation notes unless the user explicitly asks for another language."
+        )
+    if preferred_response_language == ResponseLanguage.EN:
+        return "Default to English for the answer and citation notes unless the user explicitly asks for another language."
+    return "Reply in the same language as the user unless they explicitly ask otherwise."
 
 
 def _record_tool_event(

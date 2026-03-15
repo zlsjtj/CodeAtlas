@@ -192,6 +192,7 @@ export function usePatchChecksWorkspace({
         const response = await createPatchDraft({
           instruction,
           repo_id: repoId,
+          response_language: locale,
           target_path: normalizedTargetPaths[0],
         });
         setPatchResponse(response);
@@ -201,6 +202,7 @@ export function usePatchChecksWorkspace({
         const response = await createPatchDraftBatch({
           instruction,
           repo_id: repoId,
+          response_language: locale,
           target_paths: normalizedTargetPaths,
         });
         setPatchBatchResponse(response);

@@ -386,6 +386,7 @@ export interface components {
             question: string;
             /** Session Id */
             session_id?: string | null;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** ChatAskResponse */
         ChatAskResponse: {
@@ -772,6 +773,7 @@ export interface components {
             instruction: string;
             /** Session Id */
             session_id?: string | null;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** PatchBatchDraftResponse */
         PatchBatchDraftResponse: {
@@ -833,6 +835,7 @@ export interface components {
             instruction: string;
             /** Session Id */
             session_id?: string | null;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** PatchDraftResponse */
         PatchDraftResponse: {
@@ -1016,6 +1019,11 @@ export interface components {
             /** Nodes */
             nodes: components["schemas"]["RepositoryTreeNode"][];
         };
+        /**
+         * ResponseLanguage
+         * @enum {string}
+         */
+        ResponseLanguage: "zh-CN" | "en";
         /** SearchRepoRequest */
         SearchRepoRequest: {
             /** Repo Id */

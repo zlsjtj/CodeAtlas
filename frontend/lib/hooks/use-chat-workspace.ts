@@ -37,7 +37,11 @@ export function useChatWorkspace({
     setStatusMessage(null);
 
     try {
-      const response = await askRepositoryQuestion({ repo_id: repoId, question });
+      const response = await askRepositoryQuestion({
+        repo_id: repoId,
+        question,
+        response_language: locale,
+      });
       const repository = repositories.find((item) => item.id === repoId);
       setChatResponse(response);
       setActiveChatRepoId(repoId);

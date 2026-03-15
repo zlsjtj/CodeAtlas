@@ -21,3 +21,4 @@ def test_openapi_exposes_core_agent_contracts(client):
 
     assert "rolled_back" in patch_apply_statuses
     assert "rolled_back_count" in patch_batch_properties
+    assert "ResponseLanguage" in schemas

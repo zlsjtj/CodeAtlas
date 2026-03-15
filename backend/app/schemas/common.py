@@ -1,4 +1,11 @@
+from enum import Enum
+
 from pydantic import BaseModel
+
+
+class ResponseLanguage(str, Enum):
+    ZH_CN = "zh-CN"
+    EN = "en"
 
 
 class HealthResponse(BaseModel):
@@ -16,4 +23,3 @@ class MetaResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
-

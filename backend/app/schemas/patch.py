@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import ResponseLanguage
 from app.schemas.checks import CheckRunResponse
 
 
@@ -12,6 +13,7 @@ class PatchDraftRequest(BaseModel):
     target_path: str = Field(min_length=1)
     instruction: str = Field(min_length=1)
     session_id: str | None = None
+    response_language: ResponseLanguage | None = None
 
 
 class PatchDraftTraceSummary(BaseModel):
@@ -44,6 +46,7 @@ class PatchBatchDraftRequest(BaseModel):
     target_paths: list[str] = Field(min_length=1)
     instruction: str = Field(min_length=1)
     session_id: str | None = None
+    response_language: ResponseLanguage | None = None
 
 
 class PatchBatchDraftResponse(BaseModel):

@@ -4,7 +4,7 @@ from app.agents.patch_draft_agent import PatchDraftFinalOutput
 from app.services.patch_service import PatchService
 
 
-def test_patch_draft_returns_unified_diff(client, tmp_path, monkeypatch):
+def test_patch_draft_returns_unified_diff_and_respects_language(client, tmp_path, monkeypatch):
     repository_dir = tmp_path / "patch-repo"
     repository_dir.mkdir()
     (repository_dir / "service.py").write_text(
@@ -26,16 +26,18 @@ def test_patch_draft_returns_unified_diff(client, tmp_path, monkeypatch):
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-    async def fake_run_agent(self, *, prompt, model):
+    async def fake_run_agent(self, *, prompt, model, response_language):
+        assert response_language == "en"
+        assert "Preferred response language: English" in prompt
         return (
             PatchDraftFinalOutput(
-                summary="让函数真正使用传入的 name。",
-                rationale="这是最小改动，只修正返回值，不改动签名。",
+                summary="Make the function use the provided name.",
+                rationale="This is the smallest safe change because only the return value changes.",
                 proposed_content=(
                     "def greet(name: str) -> str:\n"
                     '    return f"hello {name}"\n'
                 ),
-                warnings=["还没有运行测试，请在应用 patch 前补一次验证。"],
+                warnings=["Tests have not been run yet. Verify before applying the patch."],
             ),
             "PatchDraftAssistant",
         )
@@ -47,7 +49,8 @@ def test_patch_draft_returns_unified_diff(client, tmp_path, monkeypatch):
         json={
             "repo_id": repo_id,
             "target_path": "service.py",
-            "instruction": "让 greet 返回包含 name 的问候语。",
+            "instruction": "Update greet so the returned greeting includes the provided name.",
+            "response_language": "en",
         },
     )
 
@@ -55,13 +58,17 @@ def test_patch_draft_returns_unified_diff(client, tmp_path, monkeypatch):
     payload = response.json()
     assert payload["target_path"] == "service.py"
     assert payload["base_content_sha256"]
-    assert payload["summary"] == "让函数真正使用传入的 name。"
+    assert payload["summary"] == "Make the function use the provided name."
     assert "--- a/service.py" in payload["unified_diff"]
     assert 'return f"hello {name}"' in payload["proposed_content"]
     assert payload["trace_summary"]["agent_name"] == "PatchDraftAssistant"
 
 
-def test_patch_batch_draft_returns_grouped_file_previews(client, tmp_path, monkeypatch):
+def test_patch_batch_draft_returns_grouped_file_previews_and_respects_language(
+    client,
+    tmp_path,
+    monkeypatch,
+):
     repository_dir = tmp_path / "patch-batch-repo"
     repository_dir.mkdir()
     (repository_dir / "service.py").write_text(
@@ -84,7 +91,10 @@ def test_patch_batch_draft_returns_grouped_file_previews(client, tmp_path, monke
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-    async def fake_run_agent(self, *, prompt, model):
+    async def fake_run_agent(self, *, prompt, model, response_language):
+        assert response_language == "zh-CN"
+        assert "Preferred response language: Simplified Chinese" in prompt
+
         if "Target file: service.py" in prompt:
             return (
                 PatchDraftFinalOutput(
@@ -105,7 +115,7 @@ def test_patch_batch_draft_returns_grouped_file_previews(client, tmp_path, monke
                     summary="打开功能开关。",
                     rationale="配置项只做布尔切换，不引入额外结构。",
                     proposed_content="FEATURE_FLAG = True\n",
-                    warnings=["请确认这个开关在目标环境中可安全开启。"],
+                    warnings=["请确认这个开关在目标环境中可以安全开启。"],
                 ),
                 "PatchDraftAssistant",
             )
@@ -120,6 +130,7 @@ def test_patch_batch_draft_returns_grouped_file_previews(client, tmp_path, monke
             "repo_id": repo_id,
             "target_paths": ["service.py", "config.py", "service.py"],
             "instruction": "给这两个文件都做最小必要改动。",
+            "response_language": "zh-CN",
         },
     )
 
@@ -132,7 +143,8 @@ def test_patch_batch_draft_returns_grouped_file_previews(client, tmp_path, monke
     assert payload["items"][1]["target_path"] == "config.py"
     assert "--- a/service.py" in payload["combined_unified_diff"]
     assert "--- a/config.py" in payload["combined_unified_diff"]
-    assert any("Skipped duplicate target path" in warning for warning in payload["warnings"])
+    assert any("已跳过重复的目标路径" in warning for warning in payload["warnings"])
+    assert payload["summary"].startswith("已为 2 个文件生成改动草案")
     assert payload["trace_summary"]["agent_name"] == "PatchDraftAssistant"
 
 
@@ -156,7 +168,9 @@ def test_patch_apply_writes_file_when_hash_matches(client, tmp_path):
         json={"source_type": "local", "root_path": str(repository_dir)},
     )
     repo_id = create_response.json()["id"]
-    expected_base_sha256 = hashlib.sha256(target_file.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+    expected_base_sha256 = hashlib.sha256(
+        target_file.read_text(encoding="utf-8").encode("utf-8")
+    ).hexdigest()
 
     apply_response = client.post(
         "/api/patches/apply",
@@ -164,14 +178,17 @@ def test_patch_apply_writes_file_when_hash_matches(client, tmp_path):
             "repo_id": repo_id,
             "target_path": "service.py",
             "expected_base_sha256": expected_base_sha256,
-            "proposed_content": "def greet(name: str) -> str:\n    return f\"hello {name}\"\n",
+            "proposed_content": 'def greet(name: str) -> str:\n    return f"hello {name}"\n',
         },
     )
 
     assert apply_response.status_code == 200
     payload = apply_response.json()
     assert payload["status"] == "applied"
-    assert target_file.read_text(encoding="utf-8") == "def greet(name: str) -> str:\n    return f\"hello {name}\"\n"
+    assert (
+        target_file.read_text(encoding="utf-8")
+        == 'def greet(name: str) -> str:\n    return f"hello {name}"\n'
+    )
     assert "--- a/service.py" in payload["unified_diff"]
     assert payload["written_line_count"] == 2
 
@@ -187,7 +204,9 @@ def test_patch_apply_rejects_stale_draft(client, tmp_path):
         json={"source_type": "local", "root_path": str(repository_dir)},
     )
     repo_id = create_response.json()["id"]
-    expected_base_sha256 = hashlib.sha256(target_file.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+    expected_base_sha256 = hashlib.sha256(
+        target_file.read_text(encoding="utf-8").encode("utf-8")
+    ).hexdigest()
 
     target_file.write_text("value = 2\n", encoding="utf-8")
 
@@ -331,7 +350,9 @@ def test_patch_apply_and_checks_runs_closed_loop(client, tmp_path):
         json={"source_type": "local", "root_path": str(repository_dir)},
     )
     repo_id = create_response.json()["id"]
-    expected_base_sha256 = hashlib.sha256(target_file.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+    expected_base_sha256 = hashlib.sha256(
+        target_file.read_text(encoding="utf-8").encode("utf-8")
+    ).hexdigest()
 
     response = client.post(
         "/api/patches/apply-and-checks",
@@ -465,7 +486,7 @@ def test_patch_apply_and_checks_rolls_back_when_checks_fail(client, tmp_path):
             "repo_id": repo_id,
             "target_path": "backend/service.py",
             "expected_base_sha256": expected_base_sha256,
-            'proposed_content': 'def greet() -> str:\n    return "goodbye"\n',
+            "proposed_content": 'def greet() -> str:\n    return "goodbye"\n',
             "profile_ids": ["backend_pytest"],
         },
     )
@@ -517,7 +538,7 @@ def test_patch_batch_apply_and_checks_rolls_back_when_checks_fail(client, tmp_pa
                 {
                     "target_path": "backend/service.py",
                     "expected_base_sha256": hashlib.sha256(original_service.encode("utf-8")).hexdigest(),
-                    'proposed_content': 'def greet() -> str:\n    return "goodbye"\n',
+                    "proposed_content": 'def greet() -> str:\n    return "goodbye"\n',
                 },
                 {
                     "target_path": "backend/config.py",

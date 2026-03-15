@@ -5,7 +5,7 @@ from app.schemas.chat import ChatCitation
 from app.services.chat_service import ChatService
 
 
-def test_chat_ask_returns_answer_and_persists_trace(client, tmp_path, monkeypatch):
+def test_chat_ask_respects_response_language_and_persists_trace(client, tmp_path, monkeypatch):
     repository_dir = tmp_path / "chat-repo"
     repository_dir.mkdir()
     (repository_dir / "service.py").write_text(
@@ -29,7 +29,9 @@ def test_chat_ask_returns_answer_and_persists_trace(client, tmp_path, monkeypatc
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-    async def fake_run_agent(self, *, user_input, run_context, model):
+    async def fake_run_agent(self, *, user_input, run_context, model, response_language):
+        assert response_language == "zh-CN"
+        assert "Preferred response language: Simplified Chinese" in user_input
         run_context.tool_events.extend(
             [
                 {
@@ -48,7 +50,7 @@ def test_chat_ask_returns_answer_and_persists_trace(client, tmp_path, monkeypatc
         )
         return (
             CodeAssistantFinalOutput(
-                answer="## 结论\n`request_index` 目前是示例函数，定义在 `service.py`。\n\n## 依据\n函数直接返回传入的 `repo_id`。",
+                answer="## 结论\n`request_index` 当前是示例函数，定义在 `service.py`。\n\n## 依据\n函数直接返回传入的 `repo_id`。",
                 citations=[
                     ChatCitation(
                         path="service.py",
@@ -67,7 +69,11 @@ def test_chat_ask_returns_answer_and_persists_trace(client, tmp_path, monkeypatc
 
     ask_response = client.post(
         "/api/chat/ask",
-        json={"repo_id": repo_id, "question": "request_index 这个入口做什么？"},
+        json={
+            "repo_id": repo_id,
+            "question": "request_index 这个入口做什么？",
+            "response_language": "zh-CN",
+        },
     )
 
     assert ask_response.status_code == 200

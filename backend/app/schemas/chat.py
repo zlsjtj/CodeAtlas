@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import ResponseLanguage
+
 
 class ChatCitation(BaseModel):
     path: str
@@ -16,6 +18,7 @@ class ChatAskRequest(BaseModel):
     repo_id: int
     question: str = Field(min_length=1)
     session_id: str | None = None
+    response_language: ResponseLanguage | None = None
 
 
 class ChatTraceStep(BaseModel):

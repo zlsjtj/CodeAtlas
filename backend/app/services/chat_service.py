@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import os
 import logging
+import os
 from time import perf_counter
 from uuid import uuid4
 
@@ -20,6 +20,7 @@ from app.models.conversation_trace import ConversationTrace
 from app.models.file_chunk import FileChunk
 from app.models.repository import Repository
 from app.schemas.chat import ChatAskRequest, ChatAskResponse, ChatTraceStep, ChatTraceSummary
+from app.schemas.common import ResponseLanguage
 from app.services.repository_service import RepositoryService, RepositoryValidationError
 from app.tools.repository_tools import RepositoryTools
 
@@ -44,7 +45,12 @@ class ChatService:
         self._validate_repository_for_chat(repository)
 
         session_id = payload.session_id or uuid4().hex
-        logger.info("chat.ask.start repo_id=%s session_id=%s", repository.id, session_id)
+        logger.info(
+            "chat.ask.start repo_id=%s session_id=%s response_language=%s",
+            repository.id,
+            session_id,
+            payload.response_language,
+        )
         runtime = RepositoryTools(self.db)
         run_context = CodeAssistantRunContext(
             repo_id=repository.id,
@@ -52,12 +58,13 @@ class ChatService:
             tool_runtime=runtime,
         )
 
-        user_input = self._build_user_input(repository, payload.question)
+        user_input = self._build_user_input(repository, payload.question, payload.response_language)
         started_at = perf_counter()
         final_output, agent_name = await self._run_agent(
             user_input=user_input,
             run_context=run_context,
             model=settings.openai_model,
+            response_language=payload.response_language,
         )
         latency_ms = int((perf_counter() - started_at) * 1000)
 
@@ -74,7 +81,10 @@ class ChatService:
             repo_id=repository.id,
             user_query=payload.question,
             tool_calls_json=json.dumps(run_context.tool_events, ensure_ascii=False),
-            citations_json=json.dumps([citation.model_dump() for citation in final_output.citations], ensure_ascii=False),
+            citations_json=json.dumps(
+                [citation.model_dump() for citation in final_output.citations],
+                ensure_ascii=False,
+            ),
             final_answer=final_output.answer,
             latency_ms=latency_ms,
         )
@@ -101,8 +111,12 @@ class ChatService:
         user_input: str,
         run_context: CodeAssistantRunContext,
         model: str,
+        response_language: ResponseLanguage | None,
     ) -> tuple[CodeAssistantFinalOutput, str]:
-        agent = build_code_assistant_agent(model)
+        agent = build_code_assistant_agent(
+            model,
+            preferred_response_language=response_language,
+        )
         result = await Runner.run(agent, user_input, context=run_context)
         final_output = result.final_output
         if not isinstance(final_output, CodeAssistantFinalOutput):
@@ -117,15 +131,32 @@ class ChatService:
             raise RepositoryValidationError("Index the repository first before asking questions.")
 
         chunk_count = int(
-            self.db.scalar(select(func.count(FileChunk.id)).where(FileChunk.repo_id == repository.id)) or 0
+            self.db.scalar(select(func.count(FileChunk.id)).where(FileChunk.repo_id == repository.id))
+            or 0
         )
         if chunk_count == 0:
             raise RepositoryValidationError("The repository has no indexed chunks yet. Trigger indexing first.")
 
-    def _build_user_input(self, repository: Repository, question: str) -> str:
+    def _build_user_input(
+        self,
+        repository: Repository,
+        question: str,
+        response_language: ResponseLanguage | None,
+    ) -> str:
         root_path = repository.root_path or "(unknown)"
-        return (
-            f"Repository name: {repository.name}\n"
-            f"Repository root: {root_path}\n"
-            f"User question: {question}"
-        )
+        preferred_language = self._describe_response_language(response_language)
+        parts = [
+            f"Repository name: {repository.name}",
+            f"Repository root: {root_path}",
+        ]
+        if preferred_language:
+            parts.append(f"Preferred response language: {preferred_language}")
+        parts.append(f"User question: {question}")
+        return "\n".join(parts)
+
+    def _describe_response_language(self, response_language: ResponseLanguage | None) -> str | None:
+        if response_language == ResponseLanguage.ZH_CN:
+            return "Simplified Chinese"
+        if response_language == ResponseLanguage.EN:
+            return "English"
+        return None
