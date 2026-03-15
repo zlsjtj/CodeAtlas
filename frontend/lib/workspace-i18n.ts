@@ -74,6 +74,8 @@ type LocaleCopy = {
     showAll: string;
     showCurrentRepo: string;
     showFailed: string;
+    details: string;
+    detailsEmpty: string;
     retry: string;
     retrying: string;
     retryQueued: string;
@@ -286,6 +288,8 @@ const zhCN: LocaleCopy = {
     showAll: "全部",
     showCurrentRepo: "当前仓库",
     showFailed: "仅失败",
+    details: "错误详情",
+    detailsEmpty: "没有更多错误细节。",
     retry: "重试",
     retrying: "重试中...",
     retryQueued: "已加入重试队列。",
@@ -505,6 +509,8 @@ const en: LocaleCopy = {
     showAll: "All",
     showCurrentRepo: "Current repo",
     showFailed: "Failed only",
+    details: "Error details",
+    detailsEmpty: "No additional error details.",
     retry: "Retry",
     retrying: "Retrying...",
     retryQueued: "Retry job queued.",

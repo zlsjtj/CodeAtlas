@@ -108,16 +108,24 @@ export function JobActivityPanel({
                 </div>
                 <div className="repo-meta">{job.message ?? copy.jobs.noMessage}</div>
                 {job.status === "failed" ? (
-                  <div className="button-row top-gap">
-                    <button
-                      className="button-secondary"
-                      disabled={retryingJobId === job.id}
-                      onClick={() => onRetry(job.id)}
-                      type="button"
-                    >
-                      {retryingJobId === job.id ? copy.jobs.retrying : copy.jobs.retry}
-                    </button>
-                  </div>
+                  <>
+                    <details className="job-details top-gap">
+                      <summary className="job-details-summary">{copy.jobs.details}</summary>
+                      <pre className="job-details-content">
+                        {job.message?.trim() || copy.jobs.detailsEmpty}
+                      </pre>
+                    </details>
+                    <div className="button-row top-gap">
+                      <button
+                        className="button-secondary"
+                        disabled={retryingJobId === job.id}
+                        onClick={() => onRetry(job.id)}
+                        type="button"
+                      >
+                        {retryingJobId === job.id ? copy.jobs.retrying : copy.jobs.retry}
+                      </button>
+                    </div>
+                  </>
                 ) : null}
               </article>
             );

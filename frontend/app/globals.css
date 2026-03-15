@@ -607,6 +607,32 @@ select {
   color: var(--accent);
 }
 
+.job-details {
+  margin-top: 14px;
+  border: 1px solid rgba(65, 54, 37, 0.08);
+  border-radius: 14px;
+  background: rgba(36, 28, 18, 0.03);
+}
+
+.job-details-summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  user-select: none;
+}
+
+.job-details-content {
+  margin: 0;
+  padding: 0 14px 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
 .repo-header {
   display: flex;
   align-items: center;
