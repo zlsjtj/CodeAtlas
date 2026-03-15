@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type {
   PatchApplyResponse,
@@ -10,6 +10,12 @@ import type {
   PatchDraftResponse,
   RepositoryRecord,
 } from "@/lib/types";
+import {
+  formatPatchStatus,
+  formatRepositoryStatus,
+  getWorkspaceCopy,
+  type WorkspaceLocale,
+} from "@/lib/workspace-i18n";
 
 type PatchDraftPanelProps = {
   selectedRepository: RepositoryRecord | null;
@@ -20,6 +26,7 @@ type PatchDraftPanelProps = {
   isApplyingAndChecking: boolean;
   isApplyingBatchAndChecking: boolean;
   recommendedCheckCount: number;
+  locale: WorkspaceLocale;
   onDraft: (repoId: number, targetPaths: string[], instruction: string) => Promise<void> | void;
   onApply: (response: PatchDraftResponse) => Promise<void> | void;
   onApplyBatch: (repoId: number, drafts: PatchDraftFile[]) => Promise<void> | void;
@@ -80,15 +87,46 @@ function DiffPreview({ diff }: { diff: string }) {
   );
 }
 
+function summarizeApplyResult(locale: WorkspaceLocale, result: PatchApplyResponse): string {
+  if (result.status === "applied") {
+    return locale === "zh-CN"
+      ? `文件已写入，当前共 ${result.written_line_count} 行。`
+      : `The file was written successfully and now has ${result.written_line_count} lines.`;
+  }
+  if (result.status === "rolled_back") {
+    return locale === "zh-CN"
+      ? "应用后检查失败，改动已经自动回滚。"
+      : "The patch was rolled back after verification failed.";
+  }
+  return locale === "zh-CN"
+    ? "当前内容与草案一致，没有额外写入。"
+    : "The workspace already matched the proposed content, so no write was needed.";
+}
+
+function summarizeBatchItem(locale: WorkspaceLocale, result: PatchApplyResponse): string {
+  if (result.status === "applied") {
+    return locale === "zh-CN" ? "该文件已写入工作区。" : "This file was written to the workspace.";
+  }
+  if (result.status === "rolled_back") {
+    return locale === "zh-CN"
+      ? "该文件所在批次已回滚。"
+      : "This file was part of a rolled-back batch.";
+  }
+  return locale === "zh-CN" ? "该文件无需额外改动。" : "No additional change was needed for this file.";
+}
+
 function PatchDraftFileCard({
   item,
+  locale,
   isSelected,
   onToggleSelected,
 }: {
   item: PatchDraftFile;
+  locale: WorkspaceLocale;
   isSelected?: boolean;
   onToggleSelected?: (targetPath: string) => void;
 }) {
+  const copy = getWorkspaceCopy(locale);
   const isSelectable = typeof onToggleSelected === "function";
   const isDiffFree = !item.unified_diff;
 
@@ -102,19 +140,21 @@ function PatchDraftFileCard({
             onChange={() => onToggleSelected?.(item.target_path)}
             type="checkbox"
           />
-          <span>{isDiffFree ? "无可应用 diff" : "包含到批量应用"}</span>
+          <span>{isDiffFree ? copy.patch.noApplicableDiff : copy.patch.selectForBatch}</span>
         </label>
       ) : null}
+
       <div className="answer-header">
         <div className="answer-label">{item.target_path}</div>
         <div className="meta-pill-row">
           <span className="meta-pill">
-            {item.original_line_count} to {item.proposed_line_count} lines
+            {item.original_line_count} → {item.proposed_line_count}
           </span>
           <span className="meta-pill">{formatLineDelta(item.line_count_delta)}</span>
-          <span className="meta-pill">base {item.base_content_sha256.slice(0, 8)}</span>
+          <span className="meta-pill">{item.base_content_sha256.slice(0, 8)}</span>
         </div>
       </div>
+
       <div className="patch-copy">{item.summary}</div>
       <div className="patch-rationale">{item.rationale}</div>
 
@@ -132,9 +172,7 @@ function PatchDraftFileCard({
         <DiffPreview diff={item.unified_diff} />
       ) : (
         <div className="placeholder-card top-gap">
-          <div className="placeholder-copy">
-            这个文件的草案没有生成文本 diff。通常意味着提示不够具体，或者模型判断当前文件无需修改。
-          </div>
+          <div className="placeholder-copy">{copy.patch.noTextualDiff}</div>
         </div>
       )}
     </div>
@@ -150,6 +188,7 @@ export function PatchDraftPanel({
   isApplyingAndChecking,
   isApplyingBatchAndChecking,
   recommendedCheckCount,
+  locale,
   onDraft,
   onApply,
   onApplyBatch,
@@ -160,11 +199,14 @@ export function PatchDraftPanel({
   applyResponse,
   batchApplyResponse,
 }: PatchDraftPanelProps) {
+  const copy = getWorkspaceCopy(locale);
   const [targetPathsInput, setTargetPathsInput] = useState("");
-  const [instruction, setInstruction] = useState(
-    "请围绕这些目标文件做最小必要改动，并返回清晰的 unified diff 预览。",
-  );
+  const [instruction, setInstruction] = useState(copy.patch.defaultInstruction);
   const [selectedBatchPaths, setSelectedBatchPaths] = useState<string[]>([]);
+
+  useEffect(() => {
+    setInstruction(copy.patch.defaultInstruction);
+  }, [copy.patch.defaultInstruction]);
 
   useEffect(() => {
     setTargetPathsInput("");
@@ -189,7 +231,7 @@ export function PatchDraftPanel({
     );
   }, [batchResponse]);
 
-  const parsedTargetPaths = parseTargetPaths(targetPathsInput);
+  const parsedTargetPaths = useMemo(() => parseTargetPaths(targetPathsInput), [targetPathsInput]);
   const selectedBatchDrafts =
     batchResponse?.items.filter((item) => selectedBatchPaths.includes(item.target_path)) ?? [];
 
@@ -215,66 +257,66 @@ export function PatchDraftPanel({
 
   return (
     <section className="panel-card">
-      <h2 className="panel-title">Patch 草案</h2>
-      <p className="panel-copy">
-        单文件草案会继续保留安全应用入口；如果一次输入多个目标路径，系统会按同一条 instruction 逐个生成草案，并把 diff 按文件分组返回，方便先统一预览。
-      </p>
+      <h2 className="panel-title">{copy.patch.title}</h2>
+      <p className="panel-copy">{copy.patch.description}</p>
 
       {!selectedRepository ? (
         <div className="placeholder-card">
-          <div className="placeholder-copy">先选择一个仓库，再生成 patch 草案。</div>
+          <div className="placeholder-copy">{copy.patch.selectRepository}</div>
         </div>
       ) : !hasWorkspaceRoot ? (
         <div className="placeholder-card">
-          <div className="placeholder-copy">
-            当前仓库还没有可用工作区。先确保它已经导入本地路径，或者已经从 GitHub clone 成功。
-          </div>
+          <div className="placeholder-copy">{copy.patch.missingWorkspace}</div>
         </div>
       ) : (
         <form className="field-grid" onSubmit={handleSubmit}>
           <div className="focus-card">
-            <div className="focus-card-label">草案目标仓库</div>
+            <div className="focus-card-label">{copy.patch.targetRepository}</div>
             <div className="focus-card-title">{selectedRepository.name}</div>
             <div className="focus-card-copy">
-              {selectedRepository.root_path ?? "未找到本地路径"}
+              {selectedRepository.root_path ?? copy.workspace.unknown}
             </div>
             <div className="meta-pill-row">
-              <span className="meta-pill">{selectedRepository.status}</span>
-              <span className="meta-pill">{selectedRepository.primary_language ?? "language unknown"}</span>
               <span className="meta-pill">
-                {isBatchMode ? "multi-file preview" : "single-file safe apply"}
+                {formatRepositoryStatus(locale, selectedRepository.status)}
+              </span>
+              <span className="meta-pill">
+                {selectedRepository.primary_language ?? copy.workspace.unknown}
+              </span>
+              <span className="meta-pill">
+                {isBatchMode ? copy.patch.multiFilePreview : copy.patch.singleFileSafeApply}
               </span>
             </div>
           </div>
 
           <label className="field-label">
-            目标文件路径
+            {copy.patch.targetPaths}
             <textarea
               className="textarea-input"
               onChange={(event) => setTargetPathsInput(event.target.value)}
-              placeholder={"一行一个路径，例如\nbackend/app/services/chat_service.py\nfrontend/components/checks/checks-panel.tsx"}
+              placeholder={copy.patch.targetPathsPlaceholder}
               rows={4}
               value={targetPathsInput}
             />
           </label>
-          <p className="field-help">
-            一行一个路径。单文件时继续走原来的安全应用流程；多文件时会先给出 grouped diff，并支持勾选后批量写回。
-          </p>
+          <p className="field-help">{copy.patch.targetPathsHelp}</p>
 
           {suggestedPath ? (
             <div className="button-row">
               <button
                 className="button-secondary"
-                onClick={() => setTargetPathsInput((current) => appendSuggestedPath(current, suggestedPath))}
+                onClick={() =>
+                  setTargetPathsInput((current) => appendSuggestedPath(current, suggestedPath))
+                }
                 type="button"
               >
-                添加最近引用文件
+                {copy.patch.addSuggestedPath}
               </button>
             </div>
           ) : null}
 
           <label className="field-label">
-            改动意图
+            {copy.patch.instruction}
             <textarea
               className="textarea-input"
               onChange={(event) => setInstruction(event.target.value)}
@@ -290,10 +332,10 @@ export function PatchDraftPanel({
               type="submit"
             >
               {isDrafting
-                ? "生成中..."
+                ? copy.patch.generating
                 : isBatchMode
-                  ? `生成多文件 patch 草案 (${parsedTargetPaths.length})`
-                  : "生成 patch 草案"}
+                  ? copy.patch.generateBatch(parsedTargetPaths.length)
+                  : copy.patch.generateSingle}
             </button>
           </div>
         </form>
@@ -303,22 +345,22 @@ export function PatchDraftPanel({
         <div className="patch-stack">
           <div className="summary-grid">
             <div className="summary-card">
-              <div className="summary-label">目标文件</div>
+              <div className="summary-label">{copy.patch.targetFile}</div>
               <div className="summary-value">{response.target_path}</div>
             </div>
             <div className="summary-card">
-              <div className="summary-label">行数变化</div>
+              <div className="summary-label">{copy.patch.lineDelta}</div>
               <div className="summary-value">{formatLineDelta(response.line_count_delta)}</div>
             </div>
             <div className="summary-card">
-              <div className="summary-label">生成耗时</div>
+              <div className="summary-label">{copy.patch.latency}</div>
               <div className="summary-value">{response.trace_summary.latency_ms} ms</div>
             </div>
           </div>
 
           <div className="answer-card">
             <div className="answer-header">
-              <div className="answer-label">变更摘要</div>
+              <div className="answer-label">{copy.patch.summary}</div>
               <div className="meta-pill-row">
                 <span className="meta-pill">{response.trace_summary.agent_name}</span>
                 <span className="meta-pill">{response.trace_summary.model}</span>
@@ -340,12 +382,12 @@ export function PatchDraftPanel({
 
           <div className="diff-card">
             <div className="answer-header">
-              <div className="answer-label">Unified Diff 预览</div>
+              <div className="answer-label">{copy.patch.diffPreview}</div>
               <div className="meta-pill-row">
                 <span className="meta-pill">
-                  {response.original_line_count} to {response.proposed_line_count} lines
+                  {response.original_line_count} → {response.proposed_line_count}
                 </span>
-                <span className="meta-pill">base {response.base_content_sha256.slice(0, 8)}</span>
+                <span className="meta-pill">{response.base_content_sha256.slice(0, 8)}</span>
               </div>
             </div>
             <div className="button-row patch-action-row">
@@ -361,10 +403,10 @@ export function PatchDraftPanel({
                 type="button"
               >
                 {applyResponse?.status === "applied"
-                  ? "已应用到工作区"
+                  ? copy.patch.alreadyApplied
                   : isApplying
-                    ? "应用中..."
-                    : "确认应用到工作区"}
+                    ? copy.patch.applying
+                    : copy.patch.confirmApply}
               </button>
               <button
                 className="button-secondary"
@@ -378,31 +420,30 @@ export function PatchDraftPanel({
                 type="button"
               >
                 {isApplyingAndChecking
-                  ? "应用并验证中..."
+                  ? copy.patch.applyingAndVerifying
                   : recommendedCheckCount > 0
-                    ? `应用并运行推荐检查 (${recommendedCheckCount})`
-                    : "应用并运行默认检查"}
+                    ? copy.patch.applyAndVerify(recommendedCheckCount)
+                    : copy.patch.applyAndVerifyDefault}
               </button>
-              <div className="field-help">
-                应用前会校验文件基线哈希；如果文件已经变化，后端会拒绝写入，避免覆盖未预览的新内容。
-              </div>
+              <div className="field-help">{copy.patch.applyHelp}</div>
             </div>
             {response.unified_diff ? (
               <DiffPreview diff={response.unified_diff} />
             ) : (
               <div className="placeholder-card">
-                <div className="placeholder-copy">
-                  这次草案没有生成文本 diff。通常意味着提示不够具体，或者模型判断当前文件无需修改。
-                </div>
+                <div className="placeholder-copy">{copy.patch.noDiff}</div>
               </div>
             )}
           </div>
 
           {applyResponse ? (
             <div className="success-banner">
-              {applyResponse.message}
+              {summarizeApplyResult(locale, applyResponse)}
               {applyResponse.status === "applied"
-                ? ` 已写入 ${applyResponse.target_path}，当前共 ${applyResponse.written_line_count} 行。`
+                ? ` ${copy.patch.writeSuccess(
+                    applyResponse.target_path,
+                    applyResponse.written_line_count,
+                  )}`
                 : ""}
             </div>
           ) : null}
@@ -413,31 +454,29 @@ export function PatchDraftPanel({
         <div className="patch-stack">
           <div className="summary-grid">
             <div className="summary-card">
-              <div className="summary-label">目标文件数</div>
+              <div className="summary-label">{copy.patch.fileCount}</div>
               <div className="summary-value">{batchResponse.changed_file_count}</div>
             </div>
             <div className="summary-card">
-              <div className="summary-label">总行数变化</div>
+              <div className="summary-label">{copy.patch.lineDelta}</div>
               <div className="summary-value">{formatLineDelta(batchResponse.total_line_count_delta)}</div>
             </div>
             <div className="summary-card">
-              <div className="summary-label">总耗时</div>
+              <div className="summary-label">{copy.patch.totalLatency}</div>
               <div className="summary-value">{batchResponse.trace_summary.latency_ms} ms</div>
             </div>
           </div>
 
           <div className="answer-card">
             <div className="answer-header">
-              <div className="answer-label">批量草案摘要</div>
+              <div className="answer-label">{copy.patch.batchSummary}</div>
               <div className="meta-pill-row">
                 <span className="meta-pill">{batchResponse.trace_summary.agent_name}</span>
                 <span className="meta-pill">{batchResponse.trace_summary.model}</span>
               </div>
             </div>
             <div className="patch-copy">{batchResponse.summary}</div>
-            <div className="patch-rationale">
-              这一步除了 grouped diff 预览，还支持在下方逐项勾选要落地的文件。批量 apply 会先统一校验所有基线哈希，再开始写回；其中任意一个文件冲突，整批都会拒绝，避免半成功状态。
-            </div>
+            <div className="patch-rationale">{copy.patch.changeSummary}</div>
           </div>
 
           {batchResponse.warnings.length > 0 ? (
@@ -451,18 +490,22 @@ export function PatchDraftPanel({
           ) : null}
 
           <div className="focus-card">
-            <div className="focus-card-label">批量预览模式</div>
-            <div className="focus-card-title">先统一看 diff，再决定要应用哪些文件</div>
+            <div className="focus-card-label">{copy.patch.batchModeTitle}</div>
+            <div className="focus-card-title">{copy.patch.combinedDiff}</div>
             <div className="focus-card-copy">
               {recommendedCheckCount > 0
-                ? `这批改动已经拿到 ${recommendedCheckCount} 个推荐 checks，可以直接在下方 Checks 面板运行。`
-                : "这批改动已经进入推荐 checks 流程；如果没有命中更具体的规则，下方 Checks 面板会回退到全部已发现检查。"}
+                ? copy.patch.batchModeCopyWithRecommended(recommendedCheckCount)
+                : copy.patch.batchModeCopyDefault}
             </div>
             <div className="meta-pill-row top-gap">
-              <span className="meta-pill">selected {selectedBatchDrafts.length}</span>
-              <span className="meta-pill">changed {batchResponse.changed_file_count}</span>
               <span className="meta-pill">
-                {batchResponse.total_original_line_count} to {batchResponse.total_proposed_line_count} lines
+                {copy.patch.selectedCount}: {selectedBatchDrafts.length}
+              </span>
+              <span className="meta-pill">
+                {copy.patch.changedFiles}: {batchResponse.changed_file_count}
+              </span>
+              <span className="meta-pill">
+                {batchResponse.total_original_line_count} → {batchResponse.total_proposed_line_count}
               </span>
             </div>
           </div>
@@ -475,8 +518,8 @@ export function PatchDraftPanel({
               type="button"
             >
               {isApplyingBatch
-                ? "批量应用中..."
-                : `应用选中文件 (${selectedBatchDrafts.length})`}
+                ? copy.patch.applyingBatch
+                : copy.patch.applySelected(selectedBatchDrafts.length)}
             </button>
             <button
               className="button-secondary"
@@ -485,23 +528,21 @@ export function PatchDraftPanel({
               type="button"
             >
               {isApplyingBatchAndChecking
-                ? "批量应用并验证中..."
+                ? copy.patch.applyingBatchAndVerifying
                 : recommendedCheckCount > 0
-                  ? `应用选中文件并运行推荐检查 (${recommendedCheckCount})`
-                  : "应用选中文件并运行默认检查"}
+                  ? copy.patch.applySelectedAndVerify(recommendedCheckCount)
+                  : copy.patch.applySelectedAndVerifyDefault}
             </button>
-            <div className="field-help">
-              选中文件会作为一个批次整体提交。后端会先完成全量哈希校验，再执行写回；如果某个文件已经变化，会整批拒绝。
-            </div>
+            <div className="field-help">{copy.patch.batchHelp}</div>
           </div>
 
           {batchResponse.combined_unified_diff ? (
             <div className="diff-card">
               <div className="answer-header">
-                <div className="answer-label">Combined Diff 预览</div>
+                <div className="answer-label">{copy.patch.combinedDiff}</div>
                 <div className="meta-pill-row">
                   <span className="meta-pill">
-                    {batchResponse.total_original_line_count} to {batchResponse.total_proposed_line_count} lines
+                    {batchResponse.total_original_line_count} → {batchResponse.total_proposed_line_count}
                   </span>
                 </div>
               </div>
@@ -512,22 +553,30 @@ export function PatchDraftPanel({
           {batchApplyResponse ? (
             <div className="answer-card">
               <div className="answer-header">
-                <div className="answer-label">批量应用结果</div>
+                <div className="answer-label">{copy.patch.batchApplyResult}</div>
                 <div className="meta-pill-row">
-                  <span className="meta-pill">{batchApplyResponse.status}</span>
-                  <span className="meta-pill">applied {batchApplyResponse.applied_count}</span>
-                  <span className="meta-pill">noop {batchApplyResponse.noop_count}</span>
+                  <span className="meta-pill">{formatPatchStatus(locale, batchApplyResponse.status)}</span>
+                  <span className="meta-pill">
+                    {copy.patch.appliedCount}: {batchApplyResponse.applied_count}
+                  </span>
+                  <span className="meta-pill">
+                    {copy.patch.noopCount}: {batchApplyResponse.noop_count}
+                  </span>
                 </div>
               </div>
-              <div className="patch-copy">{batchApplyResponse.message}</div>
+              <div className="patch-copy">
+                {locale === "zh-CN"
+                  ? `本批次共处理 ${batchApplyResponse.results.length} 个文件。`
+                  : `This batch processed ${batchApplyResponse.results.length} files.`}
+              </div>
               <div className="patch-result-list top-gap">
                 {batchApplyResponse.results.map((result) => (
                   <div className="check-profile-card" key={result.target_path}>
                     <div className="answer-header">
                       <div className="answer-label">{result.target_path}</div>
-                      <span className="meta-pill">{result.status}</span>
+                      <span className="meta-pill">{formatPatchStatus(locale, result.status)}</span>
                     </div>
-                    <div className="patch-rationale">{result.message}</div>
+                    <div className="patch-rationale">{summarizeBatchItem(locale, result)}</div>
                   </div>
                 ))}
               </div>
@@ -539,6 +588,7 @@ export function PatchDraftPanel({
               isSelected={selectedBatchPaths.includes(item.target_path)}
               item={item}
               key={item.target_path}
+              locale={locale}
               onToggleSelected={toggleBatchSelection}
             />
           ))}

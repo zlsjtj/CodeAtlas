@@ -15,14 +15,22 @@ import type {
   RepositoryCreatePayload,
   RepositoryRecord,
 } from "@/lib/types";
+import type { WorkspaceLocale } from "@/lib/workspace-i18n";
+import { getWorkspaceCopy } from "@/lib/workspace-i18n";
 
 import type { WorkspaceFeedbackHandlers } from "./workspace-shared";
 import { toErrorMessage } from "./workspace-shared";
 
+type UseWorkspaceRepositoriesOptions = WorkspaceFeedbackHandlers & {
+  locale: WorkspaceLocale;
+};
+
 export function useWorkspaceRepositories({
+  locale,
   setError,
   setStatusMessage,
-}: WorkspaceFeedbackHandlers) {
+}: UseWorkspaceRepositoriesOptions) {
+  const copy = getWorkspaceCopy(locale);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [meta, setMeta] = useState<MetaResponse | null>(null);
   const [repositories, setRepositories] = useState<RepositoryRecord[]>([]);
@@ -57,8 +65,7 @@ export function useWorkspaceRepositories({
         if (!active) {
           return;
         }
-
-        setError(toErrorMessage(loadError, "Unable to load the backend workspace."));
+        setError(toErrorMessage(loadError, copy.feedback.loadWorkspace));
       } finally {
         if (active) {
           setIsLoading(false);
@@ -71,7 +78,7 @@ export function useWorkspaceRepositories({
     return () => {
       active = false;
     };
-  }, [setError]);
+  }, [copy.feedback.loadWorkspace, setError]);
 
   useEffect(() => {
     if (repositories.length === 0) {
@@ -87,7 +94,7 @@ export function useWorkspaceRepositories({
       const preferredRepository = repositories.find(
         (repository) => Boolean(repository.root_path) && repository.status === "ready",
       );
-      return preferredRepository?.id ?? repositories[0].id;
+      return preferredRepository?.id ?? repositories[0]?.id ?? null;
     });
   }, [repositories]);
 
@@ -109,9 +116,9 @@ export function useWorkspaceRepositories({
         setRepositories((current) => [created, ...current]);
       });
       setSelectedRepoId(created.id);
-      setStatusMessage(`已登记仓库：${created.name}`);
+      setStatusMessage(copy.feedback.repositoryRegistered(created.name));
     } catch (submitError) {
-      setError(toErrorMessage(submitError, "Unable to register the repository."));
+      setError(toErrorMessage(submitError, copy.feedback.registerRepository));
     } finally {
       setIsSubmitting(false);
     }
@@ -125,9 +132,9 @@ export function useWorkspaceRepositories({
     try {
       const summary = await indexRepository(repoId);
       await refreshRepositories();
-      setStatusMessage(summary.message);
+      setStatusMessage(copy.feedback.indexCompleted(summary.file_count, summary.chunk_count));
     } catch (indexError) {
-      setError(toErrorMessage(indexError, "Unable to index the repository."));
+      setError(toErrorMessage(indexError, copy.feedback.indexRepository));
     } finally {
       setIndexingRepoId(null);
     }

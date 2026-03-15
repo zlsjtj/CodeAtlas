@@ -1,56 +1,62 @@
 import type { ChatAskResponse } from "@/lib/types";
+import { getWorkspaceCopy, type WorkspaceLocale } from "@/lib/workspace-i18n";
 
 type CitationPanelProps = {
+  locale: WorkspaceLocale;
   response: ChatAskResponse | null;
 };
 
-export function CitationPanel({ response }: CitationPanelProps) {
+export function CitationPanel({ locale, response }: CitationPanelProps) {
+  const copy = getWorkspaceCopy(locale);
+  const toolCallsLabel = copy.citations.toolCalls.replace(
+    "{count}",
+    String(response?.trace_summary.tool_call_count ?? 0),
+  );
+
   return (
     <section className="panel-card">
-      <h2 className="panel-title">引用与 Trace</h2>
-      <p className="panel-copy">
-        这里展示回答依赖的引用片段，以及本次问答中 Agent 调用了哪些工具。
-      </p>
+      <h2 className="panel-title">{copy.citations.title}</h2>
+      <p className="panel-copy">{copy.citations.description}</p>
 
       {!response ? (
         <div className="placeholder-card">
-          <div className="placeholder-copy">
-            发起一次问答后，这里会显示文件路径、行号、简短摘录和工具调用摘要。
-          </div>
+          <div className="placeholder-copy">{copy.citations.empty}</div>
         </div>
       ) : (
         <div className="citation-stack">
           <div className="summary-grid">
             <div className="summary-card">
-              <div className="summary-label">证据片段</div>
+              <div className="summary-label">{copy.citations.evidenceCount}</div>
               <div className="summary-value">{response.citations.length}</div>
             </div>
             <div className="summary-card">
-              <div className="summary-label">工具步骤</div>
+              <div className="summary-label">{copy.citations.toolSteps}</div>
               <div className="summary-value">{response.trace_summary.tool_call_count}</div>
             </div>
             <div className="summary-card">
-              <div className="summary-label">响应耗时</div>
+              <div className="summary-label">{copy.citations.latency}</div>
               <div className="summary-value">{response.trace_summary.latency_ms} ms</div>
             </div>
           </div>
 
           <div className="trace-card">
-            <div className="trace-meta">
-              <span>{response.trace_summary.agent_name}</span>
-              <span>{response.trace_summary.model}</span>
-              <span>{response.trace_summary.latency_ms} ms</span>
+            <div className="answer-header">
+              <div className="answer-label">{copy.citations.traceSummary}</div>
+              <div className="meta-pill-row">
+                <span className="meta-pill">{response.trace_summary.agent_name}</span>
+                <span className="meta-pill">{response.trace_summary.model}</span>
+                <span className="meta-pill">{response.trace_summary.latency_ms} ms</span>
+              </div>
             </div>
-            <div className="trace-meta">
-              共调用 {response.trace_summary.tool_call_count} 个工具步骤
-            </div>
+            <div className="trace-meta">{toolCallsLabel}</div>
             <div className="trace-step-list">
               {response.trace_summary.steps.map((step, index) => (
                 <div className="trace-step" key={`${step.tool_name}-${index}`}>
                   <div className="trace-step-title">
-                    {step.tool_name} · {step.item_count} items
+                    {step.tool_name} · {step.item_count}
                   </div>
                   <div className="trace-step-copy">{step.args_summary}</div>
+                  {step.summary ? <div className="trace-step-copy">{step.summary}</div> : null}
                 </div>
               ))}
             </div>
@@ -58,7 +64,7 @@ export function CitationPanel({ response }: CitationPanelProps) {
 
           {response.citations.length === 0 ? (
             <div className="placeholder-card">
-              <div className="placeholder-copy">这次回答没有返回引用，说明 Agent 明确承认了证据不足。</div>
+              <div className="placeholder-copy">{copy.citations.noCitations}</div>
             </div>
           ) : (
             <div className="citation-list">
@@ -76,7 +82,9 @@ export function CitationPanel({ response }: CitationPanelProps) {
                   </div>
                   <div className="citation-note">{citation.note}</div>
                   {citation.symbol ? (
-                    <div className="citation-meta">symbol={citation.symbol}</div>
+                    <div className="citation-meta">
+                      {copy.citations.symbolPrefix}: {citation.symbol}
+                    </div>
                   ) : null}
                   {citation.excerpt ? <pre className="citation-excerpt">{citation.excerpt}</pre> : null}
                 </article>

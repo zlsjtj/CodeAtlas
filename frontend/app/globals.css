@@ -117,6 +117,14 @@ select {
   overflow: hidden;
 }
 
+.workspace-title-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
 .workspace-title-block::after {
   content: "";
   position: absolute;
@@ -141,6 +149,45 @@ select {
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.7;
+}
+
+.locale-switcher {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.locale-switcher-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.locale-switcher-options {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(65, 54, 37, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.locale-option {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.locale-option.is-active {
+  background: rgba(31, 93, 80, 0.1);
+  color: var(--accent);
 }
 
 .workspace-overview {

@@ -3,9 +3,11 @@
 import { FormEvent, useState } from "react";
 
 import type { RepositoryCreatePayload, RepositorySourceType } from "@/lib/types";
+import { getWorkspaceCopy, type WorkspaceLocale } from "@/lib/workspace-i18n";
 
 type RepositoryImportFormProps = {
   isSubmitting: boolean;
+  locale: WorkspaceLocale;
   onSubmit: (payload: RepositoryCreatePayload) => Promise<void> | void;
 };
 
@@ -27,8 +29,10 @@ const initialState: FormState = {
 
 export function RepositoryImportForm({
   isSubmitting,
+  locale,
   onSubmit,
 }: RepositoryImportFormProps) {
+  const copy = getWorkspaceCopy(locale);
   const [form, setForm] = useState<FormState>(initialState);
 
   function updateField<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
@@ -58,71 +62,67 @@ export function RepositoryImportForm({
 
   return (
     <section className="panel-card">
-      <h2 className="panel-title">导入仓库</h2>
-      <p className="panel-copy">
-        当前版本已经支持本地仓库直接接入，也支持把 GitHub 仓库 clone 到受管 `repos/` 目录后继续索引与问答。这里保留最小表单，方便我们快速把仓库接入工作台。
-      </p>
+      <h2 className="panel-title">{copy.repositoryImport.title}</h2>
+      <p className="panel-copy">{copy.repositoryImport.description}</p>
       <form className="field-grid" onSubmit={handleSubmit}>
         <div className="field-row">
           <label className="field-label">
-            仓库名称（可选）
+            {copy.repositoryImport.name}
             <input
               onChange={(event) => updateField("name", event.target.value)}
-              placeholder="例如 code-repo-agent"
+              placeholder={copy.repositoryImport.namePlaceholder}
               value={form.name}
             />
           </label>
           <label className="field-label">
-            来源类型
+            {copy.repositoryImport.sourceType}
             <select
               onChange={(event) =>
                 updateField("source_type", event.target.value as RepositorySourceType)
               }
               value={form.source_type}
             >
-              <option value="local">本地仓库</option>
-              <option value="github">GitHub 仓库</option>
+              <option value="local">{copy.repositoryImport.localOption}</option>
+              <option value="github">{copy.repositoryImport.githubOption}</option>
             </select>
           </label>
         </div>
 
         {form.source_type === "local" ? (
           <label className="field-label">
-            本地仓库路径
+            {copy.repositoryImport.localPath}
             <input
               onChange={(event) => updateField("root_path", event.target.value)}
-              placeholder="例如 E:\\AI Agent\\demo-repo"
+              placeholder={copy.repositoryImport.localPathPlaceholder}
               value={form.root_path}
             />
           </label>
         ) : (
           <div className="field-row">
             <label className="field-label">
-              GitHub 仓库地址
+              {copy.repositoryImport.githubUrl}
               <input
                 onChange={(event) => updateField("source_url", event.target.value)}
-                placeholder="https://github.com/org/repo"
+                placeholder={copy.repositoryImport.githubUrlPlaceholder}
                 value={form.source_url}
               />
             </label>
             <label className="field-label">
-              默认分支
+              {copy.repositoryImport.defaultBranch}
               <input
                 onChange={(event) => updateField("default_branch", event.target.value)}
-                placeholder="main"
+                placeholder={copy.repositoryImport.defaultBranchPlaceholder}
                 value={form.default_branch}
               />
             </label>
           </div>
         )}
 
-        <p className="field-help">
-          本地仓库会直接引用原始路径；GitHub 仓库会在后端 clone 到受管目录，并把 clone 后的工作区路径登记到 `root_path`。
-        </p>
+        <p className="field-help">{copy.repositoryImport.help}</p>
 
         <div className="button-row">
           <button className="button-primary" disabled={isSubmitting} type="submit">
-            {isSubmitting ? "提交中..." : "登记仓库"}
+            {isSubmitting ? copy.repositoryImport.submitting : copy.repositoryImport.submit}
           </button>
           <button
             className="button-secondary"
@@ -130,7 +130,7 @@ export function RepositoryImportForm({
             onClick={() => setForm(initialState)}
             type="button"
           >
-            重置表单
+            {copy.repositoryImport.reset}
           </button>
         </div>
       </form>

@@ -12,6 +12,15 @@ import { RepositoryList } from "@/components/repositories/repository-list";
 import { useChatWorkspace } from "@/lib/hooks/use-chat-workspace";
 import { usePatchChecksWorkspace } from "@/lib/hooks/use-patch-checks-workspace";
 import { useWorkspaceRepositories } from "@/lib/hooks/use-workspace-repositories";
+import {
+  formatFeature,
+  formatHealthStatus,
+  formatRepositorySource,
+  formatRepositoryStatus,
+  getWorkspaceCopy,
+  localeOptions,
+  type WorkspaceLocale,
+} from "@/lib/workspace-i18n";
 
 type WorkspaceView = "chat" | "patch" | "checks";
 
@@ -23,15 +32,19 @@ type WorkspaceTab = {
 };
 
 export function WorkspaceShell() {
+  const [locale, setLocale] = useState<WorkspaceLocale>("zh-CN");
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<WorkspaceView>("chat");
+  const copy = getWorkspaceCopy(locale);
 
   const repositoriesWorkspace = useWorkspaceRepositories({
+    locale,
     setError,
     setStatusMessage,
   });
   const chatWorkspace = useChatWorkspace({
+    locale,
     repositories: repositoriesWorkspace.repositories,
     selectedRepoId: repositoriesWorkspace.selectedRepoId,
     setSelectedRepoId: repositoriesWorkspace.setSelectedRepoId,
@@ -39,6 +52,7 @@ export function WorkspaceShell() {
     setStatusMessage,
   });
   const patchChecksWorkspace = usePatchChecksWorkspace({
+    locale,
     selectedRepoId: repositoriesWorkspace.selectedRepoId,
     selectedRepository: repositoriesWorkspace.selectedRepository,
     setSelectedRepoId: repositoriesWorkspace.setSelectedRepoId,
@@ -55,20 +69,20 @@ export function WorkspaceShell() {
   const tabs: WorkspaceTab[] = [
     {
       id: "chat",
-      label: "Chat",
-      hint: "Ask grounded questions and inspect citations.",
+      label: copy.workspace.tabs.chat.label,
+      hint: copy.workspace.tabs.chat.hint,
       count: hasChatResponse ? citationCount : undefined,
     },
     {
       id: "patch",
-      label: "Patch",
-      hint: "Draft changes first, then review the diff.",
+      label: copy.workspace.tabs.patch.label,
+      hint: copy.workspace.tabs.patch.hint,
       count: patchChecksWorkspace.patchBatchResponse?.changed_file_count,
     },
     {
       id: "checks",
-      label: "Checks",
-      hint: "Run safe lint and test commands.",
+      label: copy.workspace.tabs.checks.label,
+      hint: copy.workspace.tabs.checks.hint,
       count: checkCount > 0 ? checkCount : undefined,
     },
   ];
@@ -79,26 +93,42 @@ export function WorkspaceShell() {
     <main className="page-shell page-shell--workspace">
       <section className="workspace-topbar">
         <div className="workspace-title-block">
-          <p className="eyebrow">Repository Workspace</p>
-          <h1 className="workspace-title">Code Repository Agent</h1>
-          <p className="workspace-subtitle">
-            Import a repository, ask evidence-based questions, draft a patch, and run safe
-            verification without leaving the same workspace.
-          </p>
+          <div className="workspace-title-row">
+            <p className="eyebrow">{copy.workspace.eyebrow}</p>
+            <label className="locale-switcher">
+              <span className="locale-switcher-label">{copy.workspace.localeLabel}</span>
+              <div className="locale-switcher-options">
+                {localeOptions.map((option) => (
+                  <button
+                    className={`locale-option ${locale === option.value ? "is-active" : ""}`.trim()}
+                    key={option.value}
+                    onClick={() => setLocale(option.value)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </label>
+          </div>
+          <h1 className="workspace-title">{copy.workspace.title}</h1>
+          <p className="workspace-subtitle">{copy.workspace.subtitle}</p>
         </div>
         <div className="workspace-overview">
           <article className="workspace-metric">
-            <div className="workspace-metric-label">Backend</div>
+            <div className="workspace-metric-label">{copy.workspace.backend}</div>
             <div className="workspace-metric-value">
-              {repositoriesWorkspace.health?.status === "ok" ? "Healthy" : "Waiting"}
+              {formatHealthStatus(locale, repositoriesWorkspace.health?.status ?? "waiting")}
             </div>
           </article>
           <article className="workspace-metric">
-            <div className="workspace-metric-label">Ready repos</div>
-            <div className="workspace-metric-value">{repositoriesWorkspace.readyRepositories.length}</div>
+            <div className="workspace-metric-label">{copy.workspace.readyRepos}</div>
+            <div className="workspace-metric-value">
+              {repositoriesWorkspace.readyRepositories.length}
+            </div>
           </article>
           <article className="workspace-metric">
-            <div className="workspace-metric-label">Recent sessions</div>
+            <div className="workspace-metric-label">{copy.workspace.recentSessions}</div>
             <div className="workspace-metric-value">{chatWorkspace.chatHistory.length}</div>
           </article>
         </div>
@@ -112,31 +142,35 @@ export function WorkspaceShell() {
           <section className="panel-card context-card">
             <div className="context-card-header">
               <div>
-                <p className="context-eyebrow">Current repository</p>
+                <p className="context-eyebrow">{copy.workspace.currentRepository}</p>
                 <h2 className="context-title">
-                  {selectedRepository?.name ?? "No repository selected"}
+                  {selectedRepository?.name ?? copy.workspace.noRepositorySelected}
                 </h2>
               </div>
               <span className={`status-pill ${selectedRepository ? "" : "is-muted"}`.trim()}>
-                {selectedRepository?.status ?? "idle"}
+                {selectedRepository
+                  ? formatRepositoryStatus(locale, selectedRepository.status)
+                  : copy.workspace.notSelected}
               </span>
             </div>
             <p className="context-path">
               {selectedRepository?.root_path ??
                 selectedRepository?.source_url ??
-                "Select a repository from the list or import a new one to get started."}
+                copy.workspace.selectRepositoryHint}
             </p>
             <div className="context-meta-grid">
               <div className="context-meta-card">
-                <div className="context-meta-label">Language</div>
+                <div className="context-meta-label">{copy.workspace.language}</div>
                 <div className="context-meta-value">
-                  {selectedRepository?.primary_language ?? "Unknown"}
+                  {selectedRepository?.primary_language ?? copy.workspace.unknown}
                 </div>
               </div>
               <div className="context-meta-card">
-                <div className="context-meta-label">Source</div>
+                <div className="context-meta-label">{copy.workspace.source}</div>
                 <div className="context-meta-value">
-                  {selectedRepository?.source_type ?? "Not selected"}
+                  {selectedRepository
+                    ? formatRepositorySource(locale, selectedRepository.source_type)
+                    : copy.workspace.notSelected}
                 </div>
               </div>
             </div>
@@ -144,20 +178,18 @@ export function WorkspaceShell() {
               <div className="hero-badges compact-badges">
                 {repositoriesWorkspace.meta.features.map((feature) => (
                   <span className="signal-pill" key={feature}>
-                    {feature}
+                    {formatFeature(locale, feature)}
                   </span>
                 ))}
               </div>
             ) : null}
           </section>
 
-          <RepositoryImportForm
-            isSubmitting={repositoriesWorkspace.isSubmitting}
-            onSubmit={repositoriesWorkspace.handleRepositorySubmit}
-          />
+          <RepositoryImportForm isSubmitting={repositoriesWorkspace.isSubmitting} locale={locale} onSubmit={repositoriesWorkspace.handleRepositorySubmit} />
           <RepositoryList
-            isLoading={repositoriesWorkspace.isLoading}
             indexingRepoId={repositoriesWorkspace.indexingRepoId}
+            isLoading={repositoriesWorkspace.isLoading}
+            locale={locale}
             onIndex={repositoriesWorkspace.handleIndexRepository}
             onSelect={repositoriesWorkspace.setSelectedRepoId}
             repositories={repositoriesWorkspace.repositories}
@@ -167,6 +199,7 @@ export function WorkspaceShell() {
             <ChatHistoryPanel
               activeSessionId={chatWorkspace.chatResponse?.session_id ?? null}
               entries={chatWorkspace.chatHistory}
+              locale={locale}
               onSelectSession={chatWorkspace.handleSelectHistory}
             />
           ) : null}
@@ -176,11 +209,11 @@ export function WorkspaceShell() {
           <section className="panel-card stage-frame">
             <div className="stage-frame-header">
               <div className="stage-frame-copyblock">
-                <p className="context-eyebrow">Active stage</p>
+                <p className="context-eyebrow">{copy.workspace.activeStage}</p>
                 <h2 className="stage-frame-title">{activeTab.label}</h2>
                 <p className="stage-frame-copy">{activeTab.hint}</p>
               </div>
-              <div className="view-tabs" role="tablist" aria-label="Workspace stages">
+              <div aria-label="Workspace stages" className="view-tabs" role="tablist">
                 {tabs.map((tab) => (
                   <button
                     aria-selected={tab.id === activeView}
@@ -199,13 +232,12 @@ export function WorkspaceShell() {
           </section>
 
           {activeView === "chat" ? (
-            <div
-              className={`workspace-stage-grid ${hasChatResponse ? "" : "is-single"}`.trim()}
-            >
+            <div className={`workspace-stage-grid ${hasChatResponse ? "" : "is-single"}`.trim()}>
               <div className="workspace-stage-primary">
                 <ChatPanel
                   historyCount={chatWorkspace.chatHistory.length}
                   isAsking={chatWorkspace.isAsking}
+                  locale={locale}
                   onAsk={chatWorkspace.handleAsk}
                   onSelectRepo={repositoriesWorkspace.setSelectedRepoId}
                   repositories={repositoriesWorkspace.repositories}
@@ -215,7 +247,7 @@ export function WorkspaceShell() {
               </div>
               {hasChatResponse ? (
                 <div className="workspace-stage-secondary">
-                  <CitationPanel response={chatWorkspace.chatResponse} />
+                  <CitationPanel locale={locale} response={chatWorkspace.chatResponse} />
                 </div>
               ) : null}
             </div>
@@ -227,16 +259,17 @@ export function WorkspaceShell() {
               batchApplyResponse={patchChecksWorkspace.patchBatchApplyResponse}
               batchResponse={patchChecksWorkspace.patchBatchResponse}
               isApplying={patchChecksWorkspace.isApplyingPatch}
+              isApplyingAndChecking={patchChecksWorkspace.isApplyingAndChecking}
               isApplyingBatch={patchChecksWorkspace.isApplyingBatchPatch}
               isApplyingBatchAndChecking={patchChecksWorkspace.isApplyingBatchAndChecking}
-              isApplyingAndChecking={patchChecksWorkspace.isApplyingAndChecking}
               isDrafting={patchChecksWorkspace.isDraftingPatch}
-              recommendedCheckCount={patchChecksWorkspace.recommendedCheckCount}
+              locale={locale}
               onApply={patchChecksWorkspace.handleApplyPatch}
+              onApplyAndCheck={patchChecksWorkspace.handleApplyPatchAndRunChecks}
               onApplyBatch={patchChecksWorkspace.handleApplyPatchBatch}
               onApplyBatchAndCheck={patchChecksWorkspace.handleApplyPatchBatchAndRunChecks}
-              onApplyAndCheck={patchChecksWorkspace.handleApplyPatchAndRunChecks}
               onDraft={patchChecksWorkspace.handleDraftPatch}
+              recommendedCheckCount={patchChecksWorkspace.recommendedCheckCount}
               response={patchChecksWorkspace.patchResponse}
               selectedRepository={selectedRepository}
               suggestedPath={chatWorkspace.suggestedPatchPath}
@@ -248,6 +281,7 @@ export function WorkspaceShell() {
               isLoadingProfiles={patchChecksWorkspace.isLoadingCheckProfiles}
               isLoadingRecommendation={patchChecksWorkspace.isLoadingCheckRecommendation}
               isRunningChecks={patchChecksWorkspace.isRunningChecks}
+              locale={locale}
               onRunChecks={patchChecksWorkspace.handleRunChecks}
               patchApplyResponse={patchChecksWorkspace.patchApplyResponse}
               profiles={patchChecksWorkspace.checkProfiles}

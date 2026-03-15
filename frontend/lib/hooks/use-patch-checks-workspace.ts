@@ -26,23 +26,28 @@ import type {
   PatchDraftResponse,
   RepositoryRecord,
 } from "@/lib/types";
+import type { WorkspaceLocale } from "@/lib/workspace-i18n";
+import { getWorkspaceCopy } from "@/lib/workspace-i18n";
 
 import type { WorkspaceFeedbackHandlers } from "./workspace-shared";
 import { toErrorMessage } from "./workspace-shared";
 
 type UsePatchChecksWorkspaceOptions = WorkspaceFeedbackHandlers & {
+  locale: WorkspaceLocale;
   selectedRepoId: number | null;
   selectedRepository: RepositoryRecord | null;
   setSelectedRepoId: (repoId: number | null) => void;
 };
 
 export function usePatchChecksWorkspace({
+  locale,
   selectedRepoId,
   selectedRepository,
   setSelectedRepoId,
   setError,
   setStatusMessage,
 }: UsePatchChecksWorkspaceOptions) {
+  const copy = getWorkspaceCopy(locale);
   const [patchResponse, setPatchResponse] = useState<PatchDraftResponse | null>(null);
   const [patchBatchResponse, setPatchBatchResponse] = useState<PatchBatchDraftResponse | null>(null);
   const [patchApplyResponse, setPatchApplyResponse] = useState<PatchApplyResponse | null>(null);
@@ -62,42 +67,14 @@ export function usePatchChecksWorkspace({
   const [isRunningChecks, setIsRunningChecks] = useState(false);
 
   useEffect(() => {
-    setPatchResponse((current) => {
-      if (!current) {
-        return current;
-      }
-      return current.repo_id === selectedRepoId ? current : null;
-    });
-    setPatchBatchResponse((current) => {
-      if (!current) {
-        return current;
-      }
-      return current.repo_id === selectedRepoId ? current : null;
-    });
-    setPatchApplyResponse((current) => {
-      if (!current) {
-        return current;
-      }
-      return current.repo_id === selectedRepoId ? current : null;
-    });
-    setPatchBatchApplyResponse((current) => {
-      if (!current) {
-        return current;
-      }
-      return current.repo_id === selectedRepoId ? current : null;
-    });
-    setCheckResponse((current) => {
-      if (!current) {
-        return current;
-      }
-      return current.repo_id === selectedRepoId ? current : null;
-    });
-    setCheckRecommendation((current) => {
-      if (!current) {
-        return current;
-      }
-      return current.repo_id === selectedRepoId ? current : null;
-    });
+    setPatchResponse((current) => (current?.repo_id === selectedRepoId ? current : null));
+    setPatchBatchResponse((current) => (current?.repo_id === selectedRepoId ? current : null));
+    setPatchApplyResponse((current) => (current?.repo_id === selectedRepoId ? current : null));
+    setPatchBatchApplyResponse((current) =>
+      current?.repo_id === selectedRepoId ? current : null,
+    );
+    setCheckResponse((current) => (current?.repo_id === selectedRepoId ? current : null));
+    setCheckRecommendation((current) => (current?.repo_id === selectedRepoId ? current : null));
   }, [selectedRepoId]);
 
   useEffect(() => {
@@ -124,7 +101,7 @@ export function usePatchChecksWorkspace({
         if (!active) {
           return;
         }
-        setError(toErrorMessage(loadError, "Unable to load available checks."));
+        setError(toErrorMessage(loadError, copy.feedback.loadChecks));
       } finally {
         if (active) {
           setIsLoadingCheckProfiles(false);
@@ -136,7 +113,7 @@ export function usePatchChecksWorkspace({
     return () => {
       active = false;
     };
-  }, [selectedRepository, setError]);
+  }, [copy.feedback.loadChecks, selectedRepository, setError]);
 
   useEffect(() => {
     let active = true;
@@ -177,7 +154,7 @@ export function usePatchChecksWorkspace({
         if (!active) {
           return;
         }
-        setError(toErrorMessage(loadError, "Unable to load recommended checks."));
+        setError(toErrorMessage(loadError, copy.feedback.loadRecommendedChecks));
       } finally {
         if (active) {
           setIsLoadingCheckRecommendation(false);
@@ -189,7 +166,7 @@ export function usePatchChecksWorkspace({
     return () => {
       active = false;
     };
-  }, [patchBatchResponse, patchResponse, selectedRepository, setError]);
+  }, [copy.feedback.loadRecommendedChecks, patchBatchResponse, patchResponse, selectedRepository, setError]);
 
   function getRecommendedProfileIds(): string[] | undefined {
     return checkRecommendation && checkRecommendation.items.length > 0
@@ -219,7 +196,7 @@ export function usePatchChecksWorkspace({
         });
         setPatchResponse(response);
         setPatchBatchResponse(null);
-        setStatusMessage(`patch 草案已生成：${response.target_path}`);
+        setStatusMessage(copy.feedback.draftPatchSingleReady(response.target_path));
       } else {
         const response = await createPatchDraftBatch({
           instruction,
@@ -228,7 +205,7 @@ export function usePatchChecksWorkspace({
         });
         setPatchBatchResponse(response);
         setPatchResponse(null);
-        setStatusMessage(`已生成 ${response.changed_file_count} 个文件的 patch 草案。`);
+        setStatusMessage(copy.feedback.draftPatchBatchReady(response.changed_file_count));
       }
 
       setPatchApplyResponse(null);
@@ -237,7 +214,7 @@ export function usePatchChecksWorkspace({
       setCheckResponse(null);
       setSelectedRepoId(repoId);
     } catch (draftError) {
-      setError(toErrorMessage(draftError, "Unable to draft the patch."));
+      setError(toErrorMessage(draftError, copy.feedback.draftPatch));
     } finally {
       setIsDraftingPatch(false);
     }
@@ -258,9 +235,9 @@ export function usePatchChecksWorkspace({
       });
       setPatchApplyResponse(response.patch);
       setCheckResponse(response.checks);
-      setStatusMessage(`patch 已处理并完成检查：${response.checks.summary}`);
+      setStatusMessage(copy.feedback.applyPatchAndVerifyDone);
     } catch (applyError) {
-      setError(toErrorMessage(applyError, "Unable to apply and verify the patch."));
+      setError(toErrorMessage(applyError, copy.feedback.applyPatchAndVerify));
     } finally {
       setIsApplyingAndChecking(false);
     }
@@ -279,9 +256,9 @@ export function usePatchChecksWorkspace({
         target_path: draft.target_path,
       });
       setPatchApplyResponse(response);
-      setStatusMessage(`patch 已写入工作区：${response.target_path}`);
+      setStatusMessage(copy.feedback.applyPatchDone(response.target_path));
     } catch (applyError) {
-      setError(toErrorMessage(applyError, "Unable to apply the patch."));
+      setError(toErrorMessage(applyError, copy.feedback.applyPatch));
     } finally {
       setIsApplyingPatch(false);
     }
@@ -307,9 +284,9 @@ export function usePatchChecksWorkspace({
       });
       setPatchApplyResponse(null);
       setPatchBatchApplyResponse(response);
-      setStatusMessage(`批量 patch 已完成：${response.message}`);
+      setStatusMessage(copy.feedback.applyPatchBatchDone(response.applied_count, response.noop_count));
     } catch (applyError) {
-      setError(toErrorMessage(applyError, "Unable to apply the batch patch."));
+      setError(toErrorMessage(applyError, copy.feedback.applyPatchBatch));
     } finally {
       setIsApplyingBatchPatch(false);
     }
@@ -337,9 +314,9 @@ export function usePatchChecksWorkspace({
       setPatchApplyResponse(null);
       setPatchBatchApplyResponse(response.patch);
       setCheckResponse(response.checks);
-      setStatusMessage(`批量 patch 已处理并完成检查：${response.checks.summary}`);
+      setStatusMessage(copy.feedback.applyPatchBatchAndVerifyDone);
     } catch (applyError) {
-      setError(toErrorMessage(applyError, "Unable to apply and verify the batch patch."));
+      setError(toErrorMessage(applyError, copy.feedback.applyPatchBatchAndVerify));
     } finally {
       setIsApplyingBatchAndChecking(false);
     }
@@ -360,9 +337,9 @@ export function usePatchChecksWorkspace({
         repo_id: selectedRepository.id,
       });
       setCheckResponse(response);
-      setStatusMessage(`检查执行完成：${response.summary}`);
+      setStatusMessage(copy.feedback.runChecksDone(response.results.length));
     } catch (checkError) {
-      setError(toErrorMessage(checkError, "Unable to run repository checks."));
+      setError(toErrorMessage(checkError, copy.feedback.runChecks));
     } finally {
       setIsRunningChecks(false);
     }
