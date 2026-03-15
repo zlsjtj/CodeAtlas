@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.language import get_response_language
 from app.core.db import get_db
 from app.schemas.common import ResponseLanguage
+from app.schemas.jobs import JobRunRead
 from app.schemas.repository import (
     FileChunkListResponse,
     RepositoryCreate,
@@ -14,6 +15,7 @@ from app.schemas.repository import (
     RepositoryTreeResponse,
 )
 from app.services.indexing_service import IndexingService
+from app.services.job_service import JobService
 from app.services.repository_service import RepositoryService
 
 router = APIRouter(prefix="/repositories", tags=["repositories"])
@@ -99,3 +101,13 @@ def request_index(
 
     repository = repository_service.get_repository(repo_id, response_language)
     return indexing_service.request_index(repository, response_language)
+
+
+@router.post("/{repo_id}/index-jobs", response_model=JobRunRead, status_code=status.HTTP_202_ACCEPTED)
+def create_index_job(
+    repo_id: int,
+    db: Session = Depends(get_db),
+    response_language: ResponseLanguage | None = Depends(get_response_language),
+) -> JobRunRead:
+    service = JobService(db)
+    return service.enqueue_repository_index_job(repo_id, response_language)

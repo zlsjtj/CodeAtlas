@@ -45,9 +45,8 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    from app.models import conversation_trace, file_chunk, repository  # noqa: F401
+    from app.models import conversation_trace, file_chunk, job_run, repository  # noqa: F401
 
     settings = get_settings()
     settings.resolved_data_dir.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=get_engine())
-

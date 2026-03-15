@@ -136,6 +136,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/repositories/{repo_id}/index-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Index Job */
+        post: operations["create_index_job_api_repositories__repo_id__index_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job */
+        get: operations["get_job_api_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tools/list-tree": {
         parameters: {
             query?: never;
@@ -631,6 +665,45 @@ export interface components {
             app_name: string;
             /** Version */
             version: string;
+        };
+        /** JobRunRead */
+        JobRunRead: {
+            /** Id */
+            id: number;
+            /** Repo Id */
+            repo_id: number;
+            /**
+             * Job Type
+             * @constant
+             */
+            job_type: "repository_index";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "failed";
+            /** Message */
+            message: string | null;
+            /** File Count */
+            file_count: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /** Skipped File Count */
+            skipped_file_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** ListRepoTreeRequest */
         ListRepoTreeRequest: {
@@ -1379,6 +1452,70 @@ export interface operations {
             };
         };
     };
+    create_index_job_api_repositories__repo_id__index_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
+            path: {
+                repo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRunRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_api_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRunRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_repo_tree_api_tools_list_tree_post: {
         parameters: {
             query?: never;
@@ -1767,7 +1904,9 @@ export interface operations {
     list_check_profiles_api_checks_repositories__repo_id__profiles_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path: {
                 repo_id: number;
             };
@@ -1798,7 +1937,9 @@ export interface operations {
     recommend_checks_api_checks_recommend_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1831,7 +1972,9 @@ export interface operations {
     run_checks_api_checks_run_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

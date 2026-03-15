@@ -9,6 +9,7 @@ from app.core.db import Base, utc_now
 if TYPE_CHECKING:
     from app.models.conversation_trace import ConversationTrace
     from app.models.file_chunk import FileChunk
+    from app.models.job_run import JobRun
 
 
 class Repository(Base):
@@ -33,4 +34,7 @@ class Repository(Base):
         back_populates="repository",
         cascade="all, delete-orphan",
     )
-
+    job_runs: Mapped[list["JobRun"]] = relationship(
+        back_populates="repository",
+        cascade="all, delete-orphan",
+    )
