@@ -1,89 +1,31 @@
-export type RepositorySourceType = "local" | "github";
-export type RepositoryStatus = "pending" | "ready" | "indexing" | "failed";
+import type { components, operations, paths } from "./generated/api-types";
 
-export type HealthResponse = {
-  status: string;
-  app_name: string;
-  version: string;
-};
+type ApiSchema<Name extends keyof components["schemas"]> = components["schemas"][Name];
 
-export type MetaResponse = {
-  app_name: string;
-  version: string;
-  api_prefix: string;
-  features: string[];
-};
+export type ApiPaths = paths;
+export type ApiOperations = operations;
 
-export type RepositoryRecord = {
-  id: number;
-  name: string;
-  source_type: RepositorySourceType;
-  source_url: string | null;
-  root_path: string | null;
-  default_branch: string | null;
-  primary_language: string | null;
-  status: RepositoryStatus;
-  created_at: string;
-  updated_at: string;
-};
+export type RepositorySourceType = ApiSchema<"RepositoryCreate">["source_type"];
+export type RepositoryStatus = ApiSchema<"RepositoryRead">["status"];
+export type CheckCategory = ApiSchema<"CheckProfileRead">["category"];
+export type CheckStatus = ApiSchema<"CheckRunResponse">["status"];
 
-export type RepositoryListResponse = {
-  items: RepositoryRecord[];
-};
+export type HealthResponse = ApiSchema<"HealthResponse">;
+export type MetaResponse = ApiSchema<"MetaResponse">;
 
-export type RepositoryIndexResponse = {
-  repo_id: number;
-  status: RepositoryStatus;
-  message: string;
-  file_count: number;
-  chunk_count: number;
-  skipped_file_count: number;
-};
+export type RepositoryRecord = ApiSchema<"RepositoryRead">;
+export type RepositoryListResponse = ApiSchema<"RepositoryListResponse">;
+export type RepositoryIndexResponse = ApiSchema<"RepositoryIndexResponse">;
+export type RepositoryIndexStatusResponse = ApiSchema<"RepositoryIndexStatusResponse">;
+export type RepositoryTreeNode = ApiSchema<"RepositoryTreeNode">;
+export type RepositoryTreeResponse = ApiSchema<"RepositoryTreeResponse">;
+export type RepositoryCreatePayload = ApiSchema<"RepositoryCreate">;
 
-export type RepositoryCreatePayload = {
-  name?: string;
-  source_type: RepositorySourceType;
-  root_path?: string;
-  source_url?: string;
-  default_branch?: string;
-};
-
-export type ChatCitation = {
-  path: string;
-  start_line: number | null;
-  end_line: number | null;
-  symbol: string | null;
-  note: string;
-  excerpt: string | null;
-};
-
-export type ChatTraceStep = {
-  tool_name: string;
-  args_summary: string;
-  item_count: number;
-  summary: string | null;
-};
-
-export type ChatTraceSummary = {
-  agent_name: string;
-  model: string;
-  latency_ms: number;
-  tool_call_count: number;
-  steps: ChatTraceStep[];
-};
-
-export type ChatAskPayload = {
-  repo_id: number;
-  question: string;
-  session_id?: string;
-};
-
-export type ChatAskResponse = {
-  session_id: string;
-  answer: string;
-  citations: ChatCitation[];
-  trace_summary: ChatTraceSummary;
-};
+export type ChatCitation = ApiSchema<"ChatCitation">;
+export type ChatTraceStep = ApiSchema<"ChatTraceStep">;
+export type ChatTraceSummary = ApiSchema<"ChatTraceSummary">;
+export type ChatAskPayload = ApiSchema<"ChatAskRequest">;
+export type ChatAskResponse = ApiSchema<"ChatAskResponse">;
 
 export type WorkspaceChatEntry = {
   session_id: string;
@@ -95,181 +37,36 @@ export type WorkspaceChatEntry = {
   response: ChatAskResponse;
 };
 
-export type PatchDraftPayload = {
-  repo_id: number;
-  target_path: string;
-  instruction: string;
-  session_id?: string;
-};
-
-export type PatchBatchDraftPayload = {
-  repo_id: number;
-  target_paths: string[];
-  instruction: string;
-  session_id?: string;
-};
-
-export type PatchDraftTraceSummary = {
-  agent_name: string;
-  model: string;
-  latency_ms: number;
-};
-
-export type PatchDraftFile = {
-  target_path: string;
-  base_content_sha256: string;
-  summary: string;
-  rationale: string;
+export type PatchDraftPayload = ApiSchema<"PatchDraftRequest">;
+export type PatchBatchDraftPayload = ApiSchema<"PatchBatchDraftRequest">;
+export type PatchDraftTraceSummary = ApiSchema<"PatchDraftTraceSummary">;
+export type PatchDraftFile = Omit<ApiSchema<"PatchDraftFile">, "warnings"> & {
   warnings: string[];
-  original_line_count: number;
-  proposed_line_count: number;
-  line_count_delta: number;
-  unified_diff: string;
-  proposed_content: string;
-  trace_summary: PatchDraftTraceSummary;
 };
-
-export type PatchDraftResponse = PatchDraftFile & {
-  session_id: string;
-  repo_id: number;
-};
-
-export type PatchBatchDraftResponse = {
-  session_id: string;
-  repo_id: number;
-  target_paths: string[];
-  summary: string;
+export type PatchDraftResponse = Omit<ApiSchema<"PatchDraftResponse">, "warnings"> & {
   warnings: string[];
-  changed_file_count: number;
-  total_original_line_count: number;
-  total_proposed_line_count: number;
-  total_line_count_delta: number;
-  combined_unified_diff: string;
+};
+export type PatchBatchDraftResponse = Omit<ApiSchema<"PatchBatchDraftResponse">, "warnings" | "items"> & {
+  warnings: string[];
   items: PatchDraftFile[];
-  trace_summary: PatchDraftTraceSummary;
 };
 
-export type PatchApplyPayload = {
-  repo_id: number;
-  target_path: string;
-  expected_base_sha256: string;
-  proposed_content: string;
-};
+export type PatchApplyItemPayload = ApiSchema<"PatchApplyFile">;
+export type PatchApplyPayload = ApiSchema<"PatchApplyRequest">;
+export type PatchBatchApplyPayload = ApiSchema<"PatchBatchApplyRequest">;
+export type PatchApplyResponse = ApiSchema<"PatchApplyResponse">;
+export type PatchBatchApplyResponse = ApiSchema<"PatchBatchApplyResponse">;
 
-export type PatchApplyItemPayload = {
-  target_path: string;
-  expected_base_sha256: string;
-  proposed_content: string;
-};
+export type PatchApplyAndCheckPayload = ApiSchema<"PatchApplyAndCheckRequest">;
+export type PatchBatchApplyAndCheckPayload = ApiSchema<"PatchBatchApplyAndCheckRequest">;
+export type PatchApplyAndCheckResponse = ApiSchema<"PatchApplyAndCheckResponse">;
+export type PatchBatchApplyAndCheckResponse = ApiSchema<"PatchBatchApplyAndCheckResponse">;
 
-export type PatchApplyResponse = {
-  repo_id: number;
-  target_path: string;
-  status: "applied" | "noop" | "rolled_back";
-  message: string;
-  previous_sha256: string;
-  written_sha256: string;
-  written_line_count: number;
-  unified_diff: string;
-};
-
-export type PatchBatchApplyPayload = {
-  repo_id: number;
-  items: PatchApplyItemPayload[];
-};
-
-export type PatchBatchApplyResponse = {
-  repo_id: number;
-  status: "applied" | "noop" | "rolled_back";
-  message: string;
-  applied_count: number;
-  noop_count: number;
-  rolled_back_count: number;
-  target_paths: string[];
-  combined_unified_diff: string;
-  results: PatchApplyResponse[];
-};
-
-export type PatchApplyAndCheckPayload = {
-  repo_id: number;
-  target_path: string;
-  expected_base_sha256: string;
-  proposed_content: string;
-  profile_ids?: string[];
-};
-
-export type PatchBatchApplyAndCheckPayload = {
-  repo_id: number;
-  items: PatchApplyItemPayload[];
-  profile_ids?: string[];
-};
-
-export type CheckCategory = "lint" | "typecheck" | "test";
-export type CheckStatus = "passed" | "failed" | "error" | "skipped";
-
-export type CheckProfile = {
-  id: string;
-  name: string;
-  category: CheckCategory;
-  working_dir: string;
-  command_preview: string;
-};
-
-export type CheckProfileListResponse = {
-  repo_id: number;
-  items: CheckProfile[];
-};
-
-export type CheckRecommendationItem = CheckProfile & {
-  reason: string;
-  score: number;
-};
-
-export type CheckRecommendationPayload = {
-  repo_id: number;
-  changed_paths: string[];
-};
-
-export type CheckRecommendationResponse = {
-  repo_id: number;
-  changed_paths: string[];
-  strategy: "matched" | "fallback_all" | "none";
-  summary: string;
-  items: CheckRecommendationItem[];
-};
-
-export type CheckRunPayload = {
-  repo_id: number;
-  profile_ids?: string[];
-};
-
-export type CheckExecutionResult = {
-  id: string;
-  name: string;
-  category: CheckCategory;
-  working_dir: string;
-  command_preview: string;
-  status: CheckStatus;
-  exit_code: number | null;
-  duration_ms: number;
-  stdout: string;
-  stderr: string;
-  truncated: boolean;
-};
-
-export type CheckRunResponse = {
-  repo_id: number;
-  status: CheckStatus;
-  summary: string;
-  results: CheckExecutionResult[];
-};
-
-export type PatchApplyAndCheckResponse = {
-  patch: PatchApplyResponse;
-  checks: CheckRunResponse;
-};
-
-export type PatchBatchApplyAndCheckResponse = {
-  patch: PatchBatchApplyResponse;
-  checks: CheckRunResponse;
-};
+export type CheckProfile = ApiSchema<"CheckProfileRead">;
+export type CheckProfileListResponse = ApiSchema<"CheckProfileListResponse">;
+export type CheckRecommendationItem = ApiSchema<"CheckRecommendationItem">;
+export type CheckRecommendationPayload = ApiSchema<"CheckRecommendationRequest">;
+export type CheckRecommendationResponse = ApiSchema<"CheckRecommendationResponse">;
+export type CheckRunPayload = ApiSchema<"CheckRunRequest">;
+export type CheckExecutionResult = ApiSchema<"CheckExecutionResult">;
+export type CheckRunResponse = ApiSchema<"CheckRunResponse">;

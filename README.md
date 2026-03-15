@@ -40,6 +40,7 @@
 - Agent Runtime: `OpenAI Agents SDK`
 - Storage: `SQLite`
 - ORM: `SQLAlchemy`
+- API Contract: `FastAPI OpenAPI -> openapi-typescript -> frontend/lib/generated/api-types.ts`
 
 ## 系统架构
 
