@@ -143,6 +143,7 @@ export function usePatchChecksWorkspace({
         const response = await fetchRecommendedChecks({
           changed_paths: changedPaths,
           repo_id: selectedRepository.id,
+          response_language: locale,
         });
         if (!active) {
           return;
@@ -233,6 +234,7 @@ export function usePatchChecksWorkspace({
         profile_ids: getRecommendedProfileIds(),
         proposed_content: draft.proposed_content,
         repo_id: draft.repo_id,
+        response_language: locale,
         target_path: draft.target_path,
       });
       setPatchApplyResponse(response.patch);
@@ -312,6 +314,7 @@ export function usePatchChecksWorkspace({
         })),
         profile_ids: getRecommendedProfileIds(),
         repo_id: repoId,
+        response_language: locale,
       });
       setPatchApplyResponse(null);
       setPatchBatchApplyResponse(response.patch);
@@ -337,6 +340,7 @@ export function usePatchChecksWorkspace({
       const response = await runRepositoryChecks({
         profile_ids: profileIds,
         repo_id: selectedRepository.id,
+        response_language: locale,
       });
       setCheckResponse(response);
       setStatusMessage(copy.feedback.runChecksDone(response.results.length));

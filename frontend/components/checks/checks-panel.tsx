@@ -165,11 +165,7 @@ export function ChecksPanel({
                 </span>
               </div>
             </div>
-            <div className="patch-copy">
-              {locale === "zh-CN"
-                ? `本次共执行 ${response.results.length} 项检查。`
-                : `Executed ${response.results.length} checks in this run.`}
-            </div>
+            <div className="patch-copy">{response.summary}</div>
           </div>
 
           <div className="check-result-list">

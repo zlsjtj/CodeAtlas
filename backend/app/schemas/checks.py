@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import ResponseLanguage
+
 CheckCategory = Literal["lint", "typecheck", "test"]
 CheckStatus = Literal["passed", "failed", "error", "skipped"]
 
@@ -24,6 +26,7 @@ class CheckProfileListResponse(BaseModel):
 class CheckRecommendationRequest(BaseModel):
     repo_id: int
     changed_paths: list[str] = Field(default_factory=list)
+    response_language: ResponseLanguage | None = None
 
 
 class CheckRecommendationItem(CheckProfileRead):
@@ -42,6 +45,7 @@ class CheckRecommendationResponse(BaseModel):
 class CheckRunRequest(BaseModel):
     repo_id: int
     profile_ids: list[str] | None = Field(default=None)
+    response_language: ResponseLanguage | None = None
 
 
 class CheckExecutionResult(BaseModel):

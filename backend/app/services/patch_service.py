@@ -170,7 +170,11 @@ class PatchService:
         self,
         payload: PatchApplyAndCheckRequest,
     ) -> PatchApplyAndCheckResponse:
-        self._validate_check_profile_selection(payload.repo_id, payload.profile_ids)
+        self._validate_check_profile_selection(
+            payload.repo_id,
+            payload.profile_ids,
+            payload.response_language,
+        )
         prepared_items = self._prepare_patch_apply_items(
             payload.repo_id,
             [
@@ -183,10 +187,19 @@ class PatchService:
         )
         patch_result = self._write_prepared_patches(prepared_items)[0]
         check_result = self.check_service.run_checks(
-            CheckRunRequest(repo_id=payload.repo_id, profile_ids=payload.profile_ids)
+            CheckRunRequest(
+                repo_id=payload.repo_id,
+                profile_ids=payload.profile_ids,
+                response_language=payload.response_language,
+            )
         )
         if check_result.status in {"failed", "error"}:
-            patch_result = self._rollback_patch_result(prepared_items[0], patch_result, check_result.summary)
+            patch_result = self._rollback_patch_result(
+                prepared_items[0],
+                patch_result,
+                check_result.summary,
+                payload.response_language,
+            )
         return PatchApplyAndCheckResponse(
             patch=patch_result,
             checks=check_result,
@@ -196,15 +209,28 @@ class PatchService:
         self,
         payload: PatchBatchApplyAndCheckRequest,
     ) -> PatchBatchApplyAndCheckResponse:
-        self._validate_check_profile_selection(payload.repo_id, payload.profile_ids)
+        self._validate_check_profile_selection(
+            payload.repo_id,
+            payload.profile_ids,
+            payload.response_language,
+        )
         prepared_items = self._prepare_patch_apply_items(payload.repo_id, payload.items)
         batch_results = self._write_prepared_patches(prepared_items)
         patch_result = self._build_batch_apply_response(payload.repo_id, batch_results)
         check_result = self.check_service.run_checks(
-            CheckRunRequest(repo_id=payload.repo_id, profile_ids=payload.profile_ids)
+            CheckRunRequest(
+                repo_id=payload.repo_id,
+                profile_ids=payload.profile_ids,
+                response_language=payload.response_language,
+            )
         )
         if check_result.status in {"failed", "error"}:
-            patch_result = self._rollback_batch_patch_response(prepared_items, patch_result, check_result.summary)
+            patch_result = self._rollback_batch_patch_response(
+                prepared_items,
+                patch_result,
+                check_result.summary,
+                payload.response_language,
+            )
         return PatchBatchApplyAndCheckResponse(
             patch=patch_result,
             checks=check_result,
@@ -502,6 +528,7 @@ class PatchService:
         prepared_item: PreparedPatchApply,
         result: PatchApplyResponse,
         check_summary: str,
+        response_language: ResponseLanguage | None,
     ) -> PatchApplyResponse:
         if result.status != "applied":
             return result
@@ -517,9 +544,11 @@ class PatchService:
             repo_id=result.repo_id,
             target_path=result.target_path,
             status="rolled_back",
-            message=(
+            message=self._localized_message(
+                response_language,
+                f"所选检查没有通过，改动已自动回滚。检查摘要：{check_summary}",
                 "The patch was rolled back because the selected checks did not pass. "
-                f"Check summary: {check_summary}"
+                f"Check summary: {check_summary}",
             ),
             previous_sha256=result.previous_sha256,
             written_sha256=prepared_item.current_hash,
@@ -532,6 +561,7 @@ class PatchService:
         prepared_items: list[PreparedPatchApply],
         response: PatchBatchApplyResponse,
         check_summary: str,
+        response_language: ResponseLanguage | None,
     ) -> PatchBatchApplyResponse:
         applied_paths = {result.target_path for result in response.results if result.status == "applied"}
         if not applied_paths:
@@ -555,9 +585,11 @@ class PatchService:
                     repo_id=result.repo_id,
                     target_path=result.target_path,
                     status="rolled_back",
-                    message=(
+                    message=self._localized_message(
+                        response_language,
+                        f"所选检查没有通过，这个文件的改动已自动回滚。检查摘要：{check_summary}",
                         "This patch was rolled back because the selected checks did not pass. "
-                        f"Check summary: {check_summary}"
+                        f"Check summary: {check_summary}",
                     ),
                     previous_sha256=result.previous_sha256,
                     written_sha256=prepared_item.current_hash,
@@ -575,9 +607,11 @@ class PatchService:
         return PatchBatchApplyResponse(
             repo_id=response.repo_id,
             status="rolled_back",
-            message=(
+            message=self._localized_message(
+                response_language,
+                f"所选检查没有通过，已写入的文件都已自动回滚。检查摘要：{check_summary}",
                 "Applied files were rolled back because the selected checks did not pass. "
-                f"Check summary: {check_summary}"
+                f"Check summary: {check_summary}",
             ),
             applied_count=0,
             noop_count=sum(1 for result in updated_results if result.status == "noop"),
@@ -668,7 +702,12 @@ class PatchService:
     def _hash_content(self, content: str) -> str:
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
-    def _validate_check_profile_selection(self, repo_id: int, profile_ids: list[str] | None) -> None:
+    def _validate_check_profile_selection(
+        self,
+        repo_id: int,
+        profile_ids: list[str] | None,
+        response_language: ResponseLanguage | None,
+    ) -> None:
         if not profile_ids:
             return
 
@@ -676,5 +715,9 @@ class PatchService:
         missing = [profile_id for profile_id in profile_ids if profile_id not in available_ids]
         if missing:
             raise RepositoryValidationError(
-                f"Unknown check profile ids: {', '.join(sorted(missing))}."
+                self._localized_message(
+                    response_language,
+                    f"存在未知的检查项 ID：{', '.join(sorted(missing))}。",
+                    f"Unknown check profile ids: {', '.join(sorted(missing))}.",
+                )
             )

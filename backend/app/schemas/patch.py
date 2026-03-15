@@ -105,6 +105,7 @@ class PatchBatchApplyResponse(BaseModel):
 class PatchApplyAndCheckRequest(PatchApplyFile):
     repo_id: int
     profile_ids: list[str] | None = Field(default=None)
+    response_language: ResponseLanguage | None = None
 
 
 class PatchApplyAndCheckResponse(BaseModel):
@@ -116,6 +117,7 @@ class PatchBatchApplyAndCheckRequest(BaseModel):
     repo_id: int
     items: list[PatchApplyFile] = Field(min_length=1)
     profile_ids: list[str] | None = Field(default=None)
+    response_language: ResponseLanguage | None = None
 
 
 class PatchBatchApplyAndCheckResponse(BaseModel):

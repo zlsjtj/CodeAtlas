@@ -532,6 +532,7 @@ export interface components {
             repo_id: number;
             /** Changed Paths */
             changed_paths?: string[];
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** CheckRecommendationResponse */
         CheckRecommendationResponse: {
@@ -555,6 +556,7 @@ export interface components {
             repo_id: number;
             /** Profile Ids */
             profile_ids?: string[] | null;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** CheckRunResponse */
         CheckRunResponse: {
@@ -667,6 +669,7 @@ export interface components {
             repo_id: number;
             /** Profile Ids */
             profile_ids?: string[] | null;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** PatchApplyAndCheckResponse */
         PatchApplyAndCheckResponse: {
@@ -723,6 +726,7 @@ export interface components {
             items: components["schemas"]["PatchApplyFile"][];
             /** Profile Ids */
             profile_ids?: string[] | null;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** PatchBatchApplyAndCheckResponse */
         PatchBatchApplyAndCheckResponse: {

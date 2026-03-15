@@ -18,7 +18,13 @@ def test_openapi_exposes_core_agent_contracts(client):
 
     patch_apply_statuses = schemas["PatchApplyResponse"]["properties"]["status"]["enum"]
     patch_batch_properties = schemas["PatchBatchApplyResponse"]["properties"]
+    check_recommendation_properties = schemas["CheckRecommendationRequest"]["properties"]
+    check_run_properties = schemas["CheckRunRequest"]["properties"]
+    patch_apply_and_check_properties = schemas["PatchApplyAndCheckRequest"]["properties"]
 
     assert "rolled_back" in patch_apply_statuses
     assert "rolled_back_count" in patch_batch_properties
     assert "ResponseLanguage" in schemas
+    assert "response_language" in check_recommendation_properties
+    assert "response_language" in check_run_properties
+    assert "response_language" in patch_apply_and_check_properties

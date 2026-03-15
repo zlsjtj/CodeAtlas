@@ -488,6 +488,7 @@ def test_patch_apply_and_checks_rolls_back_when_checks_fail(client, tmp_path):
             "expected_base_sha256": expected_base_sha256,
             "proposed_content": 'def greet() -> str:\n    return "goodbye"\n',
             "profile_ids": ["backend_pytest"],
+            "response_language": "zh-CN",
         },
     )
 
@@ -495,7 +496,8 @@ def test_patch_apply_and_checks_rolls_back_when_checks_fail(client, tmp_path):
     payload = response.json()
     assert payload["patch"]["status"] == "rolled_back"
     assert payload["checks"]["status"] == "failed"
-    assert "rolled back" in payload["patch"]["message"]
+    assert "已自动回滚" in payload["patch"]["message"]
+    assert payload["checks"]["summary"] == "已完成 1 项检查，其中至少有一项失败。"
     assert target_file.read_text(encoding="utf-8") == original_content
 
 
