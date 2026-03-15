@@ -201,6 +201,7 @@ export function WorkspaceShell() {
             jobs={repositoriesWorkspace.recentJobs}
             locale={locale}
             onRetry={repositoriesWorkspace.handleRetryJob}
+            onSelectRepository={repositoriesWorkspace.setSelectedRepoId}
             repositories={repositoriesWorkspace.repositories}
             retryingJobId={repositoriesWorkspace.retryingJobId}
             selectedRepoId={repositoriesWorkspace.selectedRepoId}

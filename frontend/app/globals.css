@@ -599,6 +599,12 @@ select {
   font-size: 0.84rem;
 }
 
+.job-status-copy {
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .job-filter-row {
   display: flex;
   gap: 8px;

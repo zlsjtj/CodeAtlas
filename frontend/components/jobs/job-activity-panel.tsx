@@ -9,6 +9,7 @@ type JobActivityPanelProps = {
   retryingJobId: number | null;
   selectedRepoId: number | null;
   onRetry: (jobId: number) => Promise<void> | void;
+  onSelectRepository: (repoId: number) => void;
 };
 
 type JobFilter = "all" | "current" | "failed";
@@ -60,6 +61,48 @@ function formatJobType(locale: WorkspaceLocale, jobType: JobRun["job_type"]): st
   return jobType === "repository_clone" ? "Repository clone" : "Repository index";
 }
 
+function formatJobStatusDescription(
+  locale: WorkspaceLocale,
+  status: JobRun["status"],
+  jobType: JobRun["job_type"],
+): string {
+  if (locale === "zh-CN") {
+    if (status === "queued") {
+      return jobType === "repository_clone"
+        ? "宸插姞鍏ュ悗鍙伴槦鍒楋紝绛夊緟寮€濮嬪厠闅嗕粨搴撱€?"
+        : "宸插姞鍏ュ悗鍙伴槦鍒楋紝绛夊緟寮€濮嬬储寮曘€?";
+    }
+    if (status === "running") {
+      return jobType === "repository_clone"
+        ? "鍚庡彴姝ｅ湪鍏嬮殕浠撳簱锛屽畬鎴愬悗灏卞彲浠ョ户缁储寮曞拰闂瓟銆?"
+        : "鍚庡彴姝ｅ湪鎵弿鏂囦欢骞剁敓鎴愮储寮曠墖娈点€?";
+    }
+    if (status === "succeeded") {
+      return jobType === "repository_clone"
+        ? "浠撳簱鍏嬮殕宸插畬鎴愶紝鐜板湪鍙互缁х画寤虹珛绱㈠紩銆?"
+        : "绱㈠紩浠诲姟宸插畬鎴愶紝浠撳簱宸插噯澶囧ソ鐢ㄤ簬妫€绱㈠拰闂瓟銆?";
+    }
+    return "浠诲姟澶辫触锛岄渶瑕佸厛鏌ョ湅閿欒淇℃伅鍐嶅喅瀹氭槸鍚﹂噸璇曘€?";
+  }
+
+  if (status === "queued") {
+    return jobType === "repository_clone"
+      ? "Queued in the background and waiting to start cloning."
+      : "Queued in the background and waiting to start indexing.";
+  }
+  if (status === "running") {
+    return jobType === "repository_clone"
+      ? "The backend is cloning the repository before it can be indexed and queried."
+      : "The backend is scanning files and building chunk records for retrieval.";
+  }
+  if (status === "succeeded") {
+    return jobType === "repository_clone"
+      ? "Clone finished. The repository is ready for the next indexing step."
+      : "Indexing finished. The repository is ready for search and Q&A.";
+  }
+  return "This job failed and needs attention before you retry it.";
+}
+
 export function JobActivityPanel({
   jobs,
   repositories,
@@ -67,8 +110,10 @@ export function JobActivityPanel({
   retryingJobId,
   selectedRepoId,
   onRetry,
+  onSelectRepository,
 }: JobActivityPanelProps) {
   const copy = getWorkspaceCopy(locale);
+  const openRepositoryLabel = locale === "zh-CN" ? "跳转到仓库" : "Open repository";
   const [filter, setFilter] = useState<JobFilter>("all");
   const [timeTick, setTimeTick] = useState(() => Date.now());
 
@@ -156,6 +201,26 @@ export function JobActivityPanel({
                   </span>
                 </div>
                 <div className="repo-meta">{job.message ?? copy.jobs.noMessage}</div>
+                <div className="job-status-copy">{formatJobStatusDescription(locale, job.status, job.job_type)}</div>
+                <div className="button-row top-gap">
+                  <button
+                    className="button-secondary"
+                    onClick={() => onSelectRepository(job.repo_id)}
+                    type="button"
+                  >
+                    {openRepositoryLabel}
+                  </button>
+                  {job.status === "failed" ? (
+                    <button
+                      className="button-secondary"
+                      disabled={retryingJobId === job.id}
+                      onClick={() => onRetry(job.id)}
+                      type="button"
+                    >
+                      {retryingJobId === job.id ? copy.jobs.retrying : copy.jobs.retry}
+                    </button>
+                  ) : null}
+                </div>
                 {job.status === "failed" ? (
                   <>
                     <details className="job-details top-gap">
@@ -164,16 +229,6 @@ export function JobActivityPanel({
                         {job.message?.trim() || copy.jobs.detailsEmpty}
                       </pre>
                     </details>
-                    <div className="button-row top-gap">
-                      <button
-                        className="button-secondary"
-                        disabled={retryingJobId === job.id}
-                        onClick={() => onRetry(job.id)}
-                        type="button"
-                      >
-                        {retryingJobId === job.id ? copy.jobs.retrying : copy.jobs.retry}
-                      </button>
-                    </div>
                   </>
                 ) : null}
               </article>
