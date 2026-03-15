@@ -99,6 +99,16 @@ def test_index_repository_respects_language_header(client, tmp_path):
     assert index_response.json()["message"] == "已完成索引：扫描 1 个文件，生成 1 个片段。"
 
 
+def test_list_chunks_respects_language_header_for_missing_repository(client):
+    response = client.get(
+        "/api/repositories/999/chunks",
+        headers={"X-Response-Language": "zh-CN"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "未找到仓库 #999。"
+
+
 def test_create_github_repository_rejects_non_github_host(client):
     response = client.post(
         "/api/repositories",

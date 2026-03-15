@@ -94,7 +94,52 @@ def test_read_file_limits_range_size(client, tmp_path):
 
     too_large_response = client.post(
         "/api/tools/read",
-        json={"repo_id": repo_id, "path": "long.py", "start_line": 1, "end_line": 220},
+        json={
+            "repo_id": repo_id,
+            "path": "long.py",
+            "start_line": 1,
+            "end_line": 220,
+            "response_language": "zh-CN",
+        },
     )
     assert too_large_response.status_code == 400
-    assert "at most 200 lines" in too_large_response.json()["detail"]
+    assert "单次最多返回 200 行" in too_large_response.json()["detail"]
+
+
+def test_tools_respect_language_header(client, tmp_path):
+    repository_dir = tmp_path / "localized-tool-repo"
+    (repository_dir / "src").mkdir(parents=True)
+    (repository_dir / "src" / "service.py").write_text(
+        "\n".join(
+            [
+                "def fetch_user(user_id: int):",
+                "    return {'id': user_id}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    create_response = client.post(
+        "/api/repositories",
+        json={"source_type": "local", "root_path": str(repository_dir)},
+    )
+    repo_id = create_response.json()["id"]
+    index_response = client.post(f"/api/repositories/{repo_id}/index")
+    assert index_response.status_code == 200
+
+    search_response = client.post(
+        "/api/tools/search",
+        json={"repo_id": repo_id, "query": "fetch_user", "limit": 5},
+        headers={"X-Response-Language": "zh-CN"},
+    )
+    assert search_response.status_code == 200
+    assert "找到了 1 个索引片段匹配项" in search_response.json()["summary"]
+
+    read_response = client.post(
+        "/api/tools/read",
+        json={"repo_id": repo_id, "path": "src/service.py", "start_line": 1, "end_line": 2},
+        headers={"X-Response-Language": "zh-CN"},
+    )
+    assert read_response.status_code == 200
+    assert read_response.json()["summary"] == "已从 'src/service.py' 读取 2 行。"

@@ -94,12 +94,13 @@ def list_repository_chunks(
     path: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=200),
     db: Session = Depends(get_db),
+    response_language: ResponseLanguage | None = Depends(get_response_language),
 ) -> FileChunkListResponse:
     repository_service = RepositoryService(db)
     indexing_service = IndexingService(db)
 
     try:
-        repository = repository_service.get_repository(repo_id)
+        repository = repository_service.get_repository(repo_id, response_language)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 

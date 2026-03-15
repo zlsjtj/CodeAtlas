@@ -616,6 +616,7 @@ export interface components {
              * @default 10
              */
             limit: number;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -645,6 +646,7 @@ export interface components {
              * @default 3
              */
             depth: number;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** MetaResponse */
         MetaResponse: {
@@ -891,6 +893,7 @@ export interface components {
             start_line: number;
             /** End Line */
             end_line?: number | null;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** RepositoryCreate */
         RepositoryCreate: {
@@ -1041,6 +1044,7 @@ export interface components {
              * @default 10
              */
             limit: number;
+            response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
         /** ToolExecutionResponse */
         ToolExecutionResponse: {
@@ -1176,7 +1180,9 @@ export interface operations {
     create_repository_api_repositories_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1243,7 +1249,9 @@ export interface operations {
                 path?: string;
                 depth?: number;
             };
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path: {
                 repo_id: number;
             };
@@ -1308,7 +1316,9 @@ export interface operations {
                 path?: string | null;
                 limit?: number;
             };
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path: {
                 repo_id: number;
             };
@@ -1339,7 +1349,9 @@ export interface operations {
     request_index_api_repositories__repo_id__index_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path: {
                 repo_id: number;
             };
@@ -1370,7 +1382,9 @@ export interface operations {
     list_repo_tree_api_tools_list_tree_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1403,7 +1417,9 @@ export interface operations {
     search_repo_api_tools_search_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1436,7 +1452,9 @@ export interface operations {
     read_file_api_tools_read_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1469,7 +1487,9 @@ export interface operations {
     find_symbol_api_tools_find_symbol_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1502,7 +1522,9 @@ export interface operations {
     ask_repository_question_api_chat_ask_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1535,7 +1557,9 @@ export interface operations {
     draft_patch_api_patches_draft_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1568,7 +1592,9 @@ export interface operations {
     draft_patch_batch_api_patches_draft_batch_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1601,7 +1627,9 @@ export interface operations {
     apply_patch_api_patches_apply_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1634,7 +1662,9 @@ export interface operations {
     apply_patch_batch_api_patches_apply_batch_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1667,7 +1697,9 @@ export interface operations {
     apply_patch_and_run_checks_api_patches_apply_and_checks_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1700,7 +1732,9 @@ export interface operations {
     apply_patch_batch_and_run_checks_api_patches_apply_batch_and_checks_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

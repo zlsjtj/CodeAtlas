@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.common import ResponseLanguage
+
 ToolItemKind = Literal["tree_node", "search_match", "file_segment", "symbol_match"]
 ToolNodeType = Literal["file", "directory"]
 
@@ -35,6 +37,7 @@ class ListRepoTreeRequest(BaseModel):
     repo_id: int
     path: str = ""
     depth: int = Field(default=3, ge=1, le=8)
+    response_language: ResponseLanguage | None = None
 
 
 class SearchRepoRequest(BaseModel):
@@ -42,6 +45,7 @@ class SearchRepoRequest(BaseModel):
     query: str = Field(min_length=1)
     path_prefix: str | None = None
     limit: int = Field(default=10, ge=1, le=50)
+    response_language: ResponseLanguage | None = None
 
 
 class ReadFileRequest(BaseModel):
@@ -49,6 +53,7 @@ class ReadFileRequest(BaseModel):
     path: str
     start_line: int = Field(default=1, ge=1)
     end_line: int | None = Field(default=None, ge=1)
+    response_language: ResponseLanguage | None = None
 
     @model_validator(mode="after")
     def validate_range(self) -> "ReadFileRequest":
@@ -62,3 +67,4 @@ class FindSymbolRequest(BaseModel):
     name: str = Field(min_length=1)
     path_hint: str | None = None
     limit: int = Field(default=10, ge=1, le=50)
+    response_language: ResponseLanguage | None = None

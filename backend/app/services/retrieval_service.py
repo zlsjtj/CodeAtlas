@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.file_chunk import FileChunk
+from app.schemas.common import ResponseLanguage
 from app.schemas.tool import (
     FindSymbolRequest,
     ListRepoTreeRequest,
@@ -55,13 +56,14 @@ class RepositoryQueryService:
         self.repository_service = RepositoryService(db)
 
     def list_repo_tree(self, payload: ListRepoTreeRequest) -> ToolExecutionResponse:
-        repository = self.repository_service.get_repository(payload.repo_id)
-        root = self.repository_service.resolve_repository_root(repository)
+        repository = self.repository_service.get_repository(payload.repo_id, payload.response_language)
+        root = self.repository_service.resolve_repository_root(repository, payload.response_language)
         tree = self.indexing_service.build_tree(
             repository,
             root=root,
             path=payload.path,
             depth=payload.depth,
+            response_language=payload.response_language,
         )
 
         items: list[ToolResultItem] = []
@@ -73,17 +75,27 @@ class RepositoryQueryService:
             repo_id=payload.repo_id,
             items=items,
             total_matches=len(items),
-            summary=f"Returned {len(items)} tree nodes for path '{tree.path or '.'}'.",
+            summary=self._localized_message(
+                payload.response_language,
+                f"已返回路径 '{tree.path or '.'}' 下的 {len(items)} 个目录树节点。",
+                f"Returned {len(items)} tree nodes for path '{tree.path or '.'}'.",
+            ),
         )
 
     def search_repo(self, payload: SearchRepoRequest) -> ToolExecutionResponse:
-        repository = self.repository_service.get_repository(payload.repo_id)
-        self._ensure_indexed(repository.id)
+        repository = self.repository_service.get_repository(payload.repo_id, payload.response_language)
+        self._ensure_indexed(repository.id, payload.response_language)
 
         normalized_query = payload.query.strip().lower()
         query_terms = [term for term in re.split(r"\s+", normalized_query) if term]
         if not query_terms:
-            raise RepositoryValidationError("query must contain at least one searchable term.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    payload.response_language,
+                    "query 至少需要包含一个可检索关键词。",
+                    "query must contain at least one searchable term.",
+                )
+            )
 
         statement = select(FileChunk).where(FileChunk.repo_id == payload.repo_id)
         for term in query_terms:
@@ -122,25 +134,57 @@ class RepositoryQueryService:
             items=items,
             truncated=len(ranked) > len(limited),
             total_matches=len(ranked),
-            summary=f"Found {len(ranked)} indexed chunk matches for query '{payload.query}'.",
+            summary=self._localized_message(
+                payload.response_language,
+                f"针对查询 '{payload.query}' 找到了 {len(ranked)} 个索引片段匹配项。",
+                f"Found {len(ranked)} indexed chunk matches for query '{payload.query}'.",
+            ),
         )
 
     def read_file(self, payload: ReadFileRequest) -> ToolExecutionResponse:
-        repository = self.repository_service.get_repository(payload.repo_id)
-        file_path = self.repository_service.resolve_relative_path(repository, payload.path)
+        repository = self.repository_service.get_repository(payload.repo_id, payload.response_language)
+        file_path = self.repository_service.resolve_relative_path(
+            repository,
+            payload.path,
+            payload.response_language,
+        )
         if not file_path.is_file():
-            raise RepositoryValidationError("The requested repository path is not a file.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    payload.response_language,
+                    "请求的仓库路径不是文件。",
+                    "The requested repository path is not a file.",
+                )
+            )
 
         try:
             lines = file_path.read_text(encoding="utf-8").splitlines()
         except UnicodeDecodeError as exc:
-            raise RepositoryValidationError("read_file currently supports UTF-8 text files only.") from exc
+            raise RepositoryValidationError(
+                self._localized_message(
+                    payload.response_language,
+                    "read_file 当前只支持 UTF-8 文本文件。",
+                    "read_file currently supports UTF-8 text files only.",
+                )
+            ) from exc
 
         if payload.start_line > len(lines):
-            raise RepositoryValidationError("start_line is outside the file range.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    payload.response_language,
+                    "start_line 超出了文件行数范围。",
+                    "start_line is outside the file range.",
+                )
+            )
         requested_end_line = payload.end_line or min(payload.start_line + MAX_READ_LINES - 1, len(lines))
         if requested_end_line - payload.start_line + 1 > MAX_READ_LINES:
-            raise RepositoryValidationError(f"read_file can return at most {MAX_READ_LINES} lines at once.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    payload.response_language,
+                    f"read_file 单次最多返回 {MAX_READ_LINES} 行。",
+                    f"read_file can return at most {MAX_READ_LINES} lines at once.",
+                )
+            )
 
         end_line = min(requested_end_line, len(lines))
         start_index = payload.start_line - 1
@@ -159,15 +203,25 @@ class RepositoryQueryService:
             repo_id=payload.repo_id,
             items=[item],
             total_matches=1,
-            summary=f"Read {max(0, end_line - payload.start_line + 1)} lines from '{payload.path}'.",
+            summary=self._localized_message(
+                payload.response_language,
+                f"已从 '{payload.path}' 读取 {max(0, end_line - payload.start_line + 1)} 行。",
+                f"Read {max(0, end_line - payload.start_line + 1)} lines from '{payload.path}'.",
+            ),
         )
 
     def find_symbol(self, payload: FindSymbolRequest) -> ToolExecutionResponse:
-        repository = self.repository_service.get_repository(payload.repo_id)
-        root = self.repository_service.resolve_repository_root(repository)
+        repository = self.repository_service.get_repository(payload.repo_id, payload.response_language)
+        root = self.repository_service.resolve_repository_root(repository, payload.response_language)
         indexed_paths = self._get_indexed_paths(payload.repo_id)
         if not indexed_paths:
-            raise RepositoryValidationError("The repository has not been indexed yet.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    payload.response_language,
+                    "这个仓库还没有完成索引。",
+                    "The repository has not been indexed yet.",
+                )
+            )
 
         target_name = payload.name.strip().lower()
         path_hint = payload.path_hint.strip().lower() if payload.path_hint else None
@@ -222,7 +276,11 @@ class RepositoryQueryService:
                         items=items,
                         truncated=True,
                         total_matches=len(items),
-                        summary=f"Stopped after {len(items)} symbol matches for '{payload.name}'.",
+                        summary=self._localized_message(
+                            payload.response_language,
+                            f"已在找到 {len(items)} 个符号匹配后停止，目标为 '{payload.name}'。",
+                            f"Stopped after {len(items)} symbol matches for '{payload.name}'.",
+                        ),
                     )
 
         return ToolExecutionResponse(
@@ -230,7 +288,11 @@ class RepositoryQueryService:
             repo_id=payload.repo_id,
             items=items,
             total_matches=len(items),
-            summary=f"Found {len(items)} symbol matches for '{payload.name}'.",
+            summary=self._localized_message(
+                payload.response_language,
+                f"针对 '{payload.name}' 找到了 {len(items)} 个符号匹配项。",
+                f"Found {len(items)} symbol matches for '{payload.name}'.",
+            ),
         )
 
     def _flatten_tree(self, node, *, depth: int) -> list[ToolResultItem]:
@@ -246,10 +308,20 @@ class RepositoryQueryService:
             items.extend(self._flatten_tree(child, depth=depth + 1))
         return items
 
-    def _ensure_indexed(self, repo_id: int) -> None:
+    def _ensure_indexed(
+        self,
+        repo_id: int,
+        response_language: ResponseLanguage | None,
+    ) -> None:
         has_chunks = self.db.scalar(select(func.count(FileChunk.id)).where(FileChunk.repo_id == repo_id))
         if not has_chunks:
-            raise RepositoryValidationError("The repository has not been indexed yet.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "这个仓库还没有完成索引。",
+                    "The repository has not been indexed yet.",
+                )
+            )
 
     def _get_indexed_paths(self, repo_id: int) -> list[str]:
         statement = select(FileChunk.path).where(FileChunk.repo_id == repo_id).distinct().order_by(FileChunk.path.asc())
@@ -292,3 +364,13 @@ class RepositoryQueryService:
             if matched:
                 return symbol_type, matched.group("name")
         return None
+
+    def _localized_message(
+        self,
+        response_language: ResponseLanguage | None,
+        zh_cn_message: str,
+        en_message: str,
+    ) -> str:
+        if response_language == ResponseLanguage.ZH_CN:
+            return zh_cn_message
+        return en_message
