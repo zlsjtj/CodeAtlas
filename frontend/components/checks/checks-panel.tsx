@@ -61,6 +61,18 @@ export function ChecksPanel({
         };
   const failedResults = response?.results.filter((result) => result.status !== "passed") ?? [];
   const passedResults = response?.results.filter((result) => result.status === "passed") ?? [];
+  const outputCopy =
+    locale === "zh-CN"
+      ? {
+          details: "展开输出详情",
+          stdout: "标准输出",
+          stderr: "错误输出",
+        }
+      : {
+          details: "View output details",
+          stdout: "Stdout",
+          stderr: "Stderr",
+        };
 
   return (
     <section className="panel-card">
@@ -201,20 +213,33 @@ export function ChecksPanel({
               <div className="results-group-title">{resultActionCopy.failedGroup}</div>
               <div className="check-result-list">
                 {failedResults.map((result) => (
-                  <article className="diff-card" key={result.id}>
-                    <div className="answer-header">
-                      <div className="answer-label">{result.name}</div>
+                  <details className="diff-card result-details-card" key={result.id} open>
+                    <summary className="trace-summary-row">
+                      <div>
+                        <div className="answer-label">{result.name}</div>
+                        <div className="citation-meta">{result.command_preview}</div>
+                      </div>
                       <div className="meta-pill-row">
                         <span className="meta-pill">{formatCheckStatus(locale, result.status)}</span>
                         <span className="meta-pill">{result.duration_ms} ms</span>
                         <span className="meta-pill">{result.exit_code ?? "-"}</span>
                       </div>
-                    </div>
-                    <div className="citation-meta">{result.command_preview}</div>
-                    {result.stdout ? <pre className="diff-output diff-output-stdout">{result.stdout}</pre> : null}
-                    {result.stderr ? <pre className="diff-output diff-output-stderr">{result.stderr}</pre> : null}
+                    </summary>
+                    <div className="trace-section-label">{outputCopy.details}</div>
+                    {result.stdout ? (
+                      <>
+                        <div className="field-help">{outputCopy.stdout}</div>
+                        <pre className="diff-output diff-output-stdout">{result.stdout}</pre>
+                      </>
+                    ) : null}
+                    {result.stderr ? (
+                      <>
+                        <div className="field-help">{outputCopy.stderr}</div>
+                        <pre className="diff-output diff-output-stderr">{result.stderr}</pre>
+                      </>
+                    ) : null}
                     {result.truncated ? <div className="field-help">{copy.checks.truncated}</div> : null}
-                  </article>
+                  </details>
                 ))}
               </div>
             </div>
@@ -225,20 +250,33 @@ export function ChecksPanel({
               <div className="results-group-title">{resultActionCopy.passedGroup}</div>
               <div className="check-result-list">
                 {passedResults.map((result) => (
-                  <article className="diff-card" key={result.id}>
-                    <div className="answer-header">
-                      <div className="answer-label">{result.name}</div>
+                  <details className="diff-card result-details-card" key={result.id}>
+                    <summary className="trace-summary-row">
+                      <div>
+                        <div className="answer-label">{result.name}</div>
+                        <div className="citation-meta">{result.command_preview}</div>
+                      </div>
                       <div className="meta-pill-row">
                         <span className="meta-pill">{formatCheckStatus(locale, result.status)}</span>
                         <span className="meta-pill">{result.duration_ms} ms</span>
                         <span className="meta-pill">{result.exit_code ?? "-"}</span>
                       </div>
-                    </div>
-                    <div className="citation-meta">{result.command_preview}</div>
-                    {result.stdout ? <pre className="diff-output diff-output-stdout">{result.stdout}</pre> : null}
-                    {result.stderr ? <pre className="diff-output diff-output-stderr">{result.stderr}</pre> : null}
+                    </summary>
+                    <div className="trace-section-label">{outputCopy.details}</div>
+                    {result.stdout ? (
+                      <>
+                        <div className="field-help">{outputCopy.stdout}</div>
+                        <pre className="diff-output diff-output-stdout">{result.stdout}</pre>
+                      </>
+                    ) : null}
+                    {result.stderr ? (
+                      <>
+                        <div className="field-help">{outputCopy.stderr}</div>
+                        <pre className="diff-output diff-output-stderr">{result.stderr}</pre>
+                      </>
+                    ) : null}
                     {result.truncated ? <div className="field-help">{copy.checks.truncated}</div> : null}
-                  </article>
+                  </details>
                 ))}
               </div>
             </div>

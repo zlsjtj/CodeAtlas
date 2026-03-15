@@ -462,6 +462,21 @@ export function WorkspaceShell() {
           ) : null}
         </section>
       </section>
+      <nav className="workspace-mobile-dock" aria-label="Workspace mobile navigation">
+        <button className="workspace-mobile-dock-button" onClick={() => setIsSidebarOpen(true)} type="button">
+          {drawerCopy.open}
+        </button>
+        {tabs.map((tab) => (
+          <button
+            className={`workspace-mobile-dock-button ${tab.id === activeView ? "is-active" : ""}`.trim()}
+            key={tab.id}
+            onClick={() => setActiveView(tab.id)}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
     </main>
   );
 }

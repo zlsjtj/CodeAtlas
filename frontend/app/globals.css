@@ -227,7 +227,8 @@ select {
 
 .workspace-sidebar-toggle,
 .workspace-sidebar-backdrop,
-.workspace-sidebar-mobile-bar {
+.workspace-sidebar-mobile-bar,
+.workspace-mobile-dock {
   display: none;
 }
 
@@ -1125,6 +1126,10 @@ select {
   background: rgba(140, 90, 25, 0.09);
 }
 
+.result-details-card[open] {
+  padding-bottom: 16px;
+}
+
 .diff-preview {
   margin-top: 12px;
   border-radius: 16px;
@@ -1173,6 +1178,7 @@ select {
   .page-shell {
     width: min(100% - 20px, 1360px);
     padding-top: 20px;
+    padding-bottom: 110px;
   }
 
   .hero-card,
@@ -1231,6 +1237,38 @@ select {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  .workspace-mobile-dock {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 25;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid rgba(65, 54, 37, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 253, 248, 0.94);
+    box-shadow: 0 18px 36px rgba(34, 27, 20, 0.16);
+    backdrop-filter: blur(14px);
+  }
+
+  .workspace-mobile-dock-button {
+    min-height: 42px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(36, 28, 18, 0.06);
+    color: var(--muted);
+  }
+
+  .workspace-mobile-dock-button.is-active {
+    background: rgba(31, 93, 80, 0.12);
+    color: var(--accent);
+    font-weight: 600;
   }
 
   .workspace-sidebar .panel-copy {
