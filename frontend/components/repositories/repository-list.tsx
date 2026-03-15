@@ -23,8 +23,8 @@ type RepositoryFilter = "all" | "ready" | "local" | "github";
 
 function getRepositoryStatusHint(locale: WorkspaceLocale, repository: RepositoryRecord): string {
   if (locale === "zh-CN") {
-    if (repository.status === "cloning") return "正在准备工作区，完成后即可索引。";
-    if (repository.status === "indexing") return "正在建立索引，暂时不适合问答或改动。";
+    if (repository.status === "cloning") return "正在准备工作区，完成后即可开始索引。";
+    if (repository.status === "indexing") return "正在建立索引，暂时不适合继续问答或改动。";
     if (repository.status === "ready") return "已可用于问答、Patch 草案和检查。";
     if (repository.status === "failed") return "最近一次流程失败，建议查看任务面板。";
     return repository.root_path ? "工作区已就绪，下一步建议开始索引。" : "等待可用工作区。";
@@ -64,7 +64,6 @@ export function RepositoryList({
           statusHintLabel: "状态说明",
           useRepo: "切换到该仓库",
           indexNow: "开始索引",
-          busy: "处理中",
         }
       : {
           searchPlaceholder: "Search repositories",
@@ -78,7 +77,6 @@ export function RepositoryList({
           statusHintLabel: "Status",
           useRepo: "Use repository",
           indexNow: "Index now",
-          busy: "Busy",
         };
 
   const filteredRepositories = useMemo(() => {
@@ -160,7 +158,7 @@ export function RepositoryList({
                 className={`repo-item repo-item-compact ${isSelected ? "is-selected is-current-repository" : ""}`.trim()}
                 key={repository.id}
               >
-                <div className="repo-item-accent" aria-hidden="true" />
+                <div aria-hidden="true" className="repo-item-accent" />
                 <div className="repo-item-content">
                   <div className="repo-header repo-header-compact">
                     <div className="repo-title-stack">

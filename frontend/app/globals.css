@@ -1154,6 +1154,14 @@ select {
   padding-bottom: 16px;
 }
 
+.diff-collapsible-card {
+  margin-top: 12px;
+}
+
+.diff-collapsible-card .diff-preview {
+  margin-top: 14px;
+}
+
 .diff-preview {
   margin-top: 12px;
   border-radius: 16px;

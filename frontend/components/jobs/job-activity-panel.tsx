@@ -1,6 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
+
 import type { JobRun, RepositoryRecord } from "@/lib/types";
 import { getWorkspaceCopy, type WorkspaceLocale } from "@/lib/workspace-i18n";
-import { useEffect, useMemo, useState } from "react";
 
 type JobActivityPanelProps = {
   jobs: JobRun[];
@@ -69,20 +70,20 @@ function formatJobStatusDescription(
   if (locale === "zh-CN") {
     if (status === "queued") {
       return jobType === "repository_clone"
-        ? "宸插姞鍏ュ悗鍙伴槦鍒楋紝绛夊緟寮€濮嬪厠闅嗕粨搴撱€?"
-        : "宸插姞鍏ュ悗鍙伴槦鍒楋紝绛夊緟寮€濮嬬储寮曘€?";
+        ? "任务已加入后台队列，等待开始克隆仓库。"
+        : "任务已加入后台队列，等待开始建立索引。";
     }
     if (status === "running") {
       return jobType === "repository_clone"
-        ? "鍚庡彴姝ｅ湪鍏嬮殕浠撳簱锛屽畬鎴愬悗灏卞彲浠ョ户缁储寮曞拰闂瓟銆?"
-        : "鍚庡彴姝ｅ湪鎵弿鏂囦欢骞剁敓鎴愮储寮曠墖娈点€?";
+        ? "后端正在克隆仓库。完成后才能继续索引和问答。"
+        : "后端正在扫描文件并写入分片索引记录。";
     }
     if (status === "succeeded") {
       return jobType === "repository_clone"
-        ? "浠撳簱鍏嬮殕宸插畬鎴愶紝鐜板湪鍙互缁х画寤虹珛绱㈠紩銆?"
-        : "绱㈠紩浠诲姟宸插畬鎴愶紝浠撳簱宸插噯澶囧ソ鐢ㄤ簬妫€绱㈠拰闂瓟銆?";
+        ? "克隆已完成。这个仓库已经可以进入下一步索引。"
+        : "索引已完成。这个仓库已经可以检索和问答。";
     }
-    return "浠诲姟澶辫触锛岄渶瑕佸厛鏌ョ湅閿欒淇℃伅鍐嶅喅瀹氭槸鍚﹂噸璇曘€?";
+    return "这个任务执行失败，建议先查看详情，再决定是否重试。";
   }
 
   if (status === "queued") {
@@ -222,14 +223,12 @@ export function JobActivityPanel({
                   ) : null}
                 </div>
                 {job.status === "failed" ? (
-                  <>
-                    <details className="job-details top-gap">
-                      <summary className="job-details-summary">{copy.jobs.details}</summary>
-                      <pre className="job-details-content">
-                        {job.message?.trim() || copy.jobs.detailsEmpty}
-                      </pre>
-                    </details>
-                  </>
+                  <details className="job-details top-gap">
+                    <summary className="job-details-summary">{copy.jobs.details}</summary>
+                    <pre className="job-details-content">
+                      {job.message?.trim() || copy.jobs.detailsEmpty}
+                    </pre>
+                  </details>
                 ) : null}
               </article>
             );

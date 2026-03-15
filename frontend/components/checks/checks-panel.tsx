@@ -67,11 +67,13 @@ export function ChecksPanel({
           details: "展开输出详情",
           stdout: "标准输出",
           stderr: "错误输出",
+          score: "得分",
         }
       : {
           details: "View output details",
           stdout: "Stdout",
           stderr: "Stderr",
+          score: "Score",
         };
 
   return (
@@ -155,7 +157,7 @@ export function ChecksPanel({
                       <div className="meta-pill-row">
                         <span className="meta-pill">{formatCheckCategory(locale, item.category)}</span>
                         <span className="meta-pill">
-                          {locale === "zh-CN" ? `得分 ${item.score}` : `Score ${item.score}`}
+                          {outputCopy.score} {item.score}
                         </span>
                       </div>
                     </div>

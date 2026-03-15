@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type {
@@ -89,6 +90,47 @@ function DiffPreview({ diff }: { diff: string }) {
   );
 }
 
+function CollapsibleDiff({
+  title,
+  meta,
+  diff,
+  locale,
+  defaultOpen = false,
+}: {
+  title: string;
+  meta?: ReactNode;
+  diff: string;
+  locale: WorkspaceLocale;
+  defaultOpen?: boolean;
+}) {
+  const copy =
+    locale === "zh-CN"
+      ? {
+          cta: "查看差异",
+          hint: "按需展开查看完整 unified diff。",
+        }
+      : {
+          cta: "View diff",
+          hint: "Expand to inspect the full unified diff when needed.",
+        };
+
+  return (
+    <details className="diff-card result-details-card diff-collapsible-card" open={defaultOpen}>
+      <summary className="trace-summary-row">
+        <div>
+          <div className="answer-label">{title}</div>
+          <div className="citation-meta">{copy.hint}</div>
+        </div>
+        <div className="meta-pill-row">
+          {meta}
+          <span className="meta-pill">{copy.cta}</span>
+        </div>
+      </summary>
+      <DiffPreview diff={diff} />
+    </details>
+  );
+}
+
 function summarizeApplyResult(locale: WorkspaceLocale, result: PatchApplyResponse): string {
   if (result.status === "applied") {
     return locale === "zh-CN"
@@ -107,14 +149,14 @@ function summarizeApplyResult(locale: WorkspaceLocale, result: PatchApplyRespons
 
 function summarizeBatchItem(locale: WorkspaceLocale, result: PatchApplyResponse): string {
   if (result.status === "applied") {
-    return locale === "zh-CN" ? "该文件已写入工作区。" : "This file was written to the workspace.";
+    return locale === "zh-CN" ? "这个文件已写入工作区。" : "This file was written to the workspace.";
   }
   if (result.status === "rolled_back") {
     return locale === "zh-CN"
-      ? "该文件所在批次已回滚。"
+      ? "这个文件所在的批次已回滚。"
       : "This file was part of a rolled-back batch.";
   }
-  return locale === "zh-CN" ? "该文件无需额外改动。" : "No additional change was needed for this file.";
+  return locale === "zh-CN" ? "这个文件无需额外改动。" : "No additional change was needed for this file.";
 }
 
 function PatchDraftFileCard({
@@ -171,7 +213,17 @@ function PatchDraftFileCard({
       ) : null}
 
       {item.unified_diff ? (
-        <DiffPreview diff={item.unified_diff} />
+        <CollapsibleDiff
+          diff={item.unified_diff}
+          locale={locale}
+          meta={
+            <>
+              <span className="meta-pill">{formatLineDelta(item.line_count_delta)}</span>
+              <span className="meta-pill">{item.base_content_sha256.slice(0, 8)}</span>
+            </>
+          }
+          title={copy.patch.diffPreview}
+        />
       ) : (
         <div className="placeholder-card top-gap">
           <div className="placeholder-copy">{copy.patch.noTextualDiff}</div>
@@ -453,7 +505,20 @@ export function PatchDraftPanel({
               <div className="field-help">{copy.patch.applyHelp}</div>
             </div>
             {response.unified_diff ? (
-              <DiffPreview diff={response.unified_diff} />
+              <CollapsibleDiff
+                defaultOpen
+                diff={response.unified_diff}
+                locale={locale}
+                meta={
+                  <>
+                    <span className="meta-pill">
+                      {response.original_line_count} → {response.proposed_line_count}
+                    </span>
+                    <span className="meta-pill">{response.base_content_sha256.slice(0, 8)}</span>
+                  </>
+                }
+                title={copy.patch.diffPreview}
+              />
             ) : (
               <div className="placeholder-card">
                 <div className="placeholder-copy">{copy.patch.noDiff}</div>
@@ -565,17 +630,17 @@ export function PatchDraftPanel({
           </div>
 
           {batchResponse.combined_unified_diff ? (
-            <div className="diff-card">
-              <div className="answer-header">
-                <div className="answer-label">{copy.patch.combinedDiff}</div>
-                <div className="meta-pill-row">
-                  <span className="meta-pill">
-                    {batchResponse.total_original_line_count} → {batchResponse.total_proposed_line_count}
-                  </span>
-                </div>
-              </div>
-              <DiffPreview diff={batchResponse.combined_unified_diff} />
-            </div>
+            <CollapsibleDiff
+              defaultOpen
+              diff={batchResponse.combined_unified_diff}
+              locale={locale}
+              meta={
+                <span className="meta-pill">
+                  {batchResponse.total_original_line_count} → {batchResponse.total_proposed_line_count}
+                </span>
+              }
+              title={copy.patch.combinedDiff}
+            />
           ) : null}
 
           {batchApplyResponse ? (
