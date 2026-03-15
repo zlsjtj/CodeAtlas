@@ -25,14 +25,29 @@ import type {
   RepositoryListResponse,
   RepositoryRecord,
 } from "@/lib/types";
+import type { WorkspaceLocale } from "@/lib/workspace-i18n";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type RequestOptions = RequestInit & {
+  locale?: WorkspaceLocale;
+};
+
+function buildLocaleHeaders(locale?: WorkspaceLocale): HeadersInit | undefined {
+  if (!locale) {
+    return undefined;
+  }
+  return {
+    "X-Response-Language": locale,
+  };
+}
+
+async function request<T>(path: string, init?: RequestOptions): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache: "no-store",
     headers: {
       "Content-Type": "application/json",
+      ...(buildLocaleHeaders(init?.locale) ?? {}),
       ...(init?.headers ?? {}),
     },
     ...init,
@@ -64,15 +79,17 @@ export function listRepositories() {
   return request<RepositoryListResponse>("/api/repositories");
 }
 
-export function createRepository(payload: RepositoryCreatePayload) {
+export function createRepository(payload: RepositoryCreatePayload, locale?: WorkspaceLocale) {
   return request<RepositoryRecord>("/api/repositories", {
     body: JSON.stringify(payload),
+    locale,
     method: "POST",
   });
 }
 
-export function indexRepository(repoId: number) {
+export function indexRepository(repoId: number, locale?: WorkspaceLocale) {
   return request<RepositoryIndexResponse>(`/api/repositories/${repoId}/index`, {
+    locale,
     method: "POST",
   });
 }
@@ -98,16 +115,18 @@ export function createPatchDraftBatch(payload: PatchBatchDraftPayload) {
   });
 }
 
-export function applyPatchDraft(payload: PatchApplyPayload) {
+export function applyPatchDraft(payload: PatchApplyPayload, locale?: WorkspaceLocale) {
   return request<PatchApplyResponse>("/api/patches/apply", {
     body: JSON.stringify(payload),
+    locale,
     method: "POST",
   });
 }
 
-export function applyPatchDraftBatch(payload: PatchBatchApplyPayload) {
+export function applyPatchDraftBatch(payload: PatchBatchApplyPayload, locale?: WorkspaceLocale) {
   return request<PatchBatchApplyResponse>("/api/patches/apply-batch", {
     body: JSON.stringify(payload),
+    locale,
     method: "POST",
   });
 }

@@ -111,7 +111,7 @@ export function useWorkspaceRepositories({
     setStatusMessage(null);
 
     try {
-      const created = await createRepository(payload);
+      const created = await createRepository(payload, locale);
       startTransition(() => {
         setRepositories((current) => [created, ...current]);
       });
@@ -130,7 +130,7 @@ export function useWorkspaceRepositories({
     setStatusMessage(null);
 
     try {
-      const summary = await indexRepository(repoId);
+      const summary = await indexRepository(repoId, locale);
       await refreshRepositories();
       setStatusMessage(copy.feedback.indexCompleted(summary.file_count, summary.chunk_count));
     } catch (indexError) {

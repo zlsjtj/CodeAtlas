@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.language import get_response_language
 from app.core.db import get_db
+from app.schemas.common import ResponseLanguage
 from app.schemas.repository import (
     FileChunkListResponse,
     RepositoryCreate,
@@ -28,10 +30,11 @@ def list_repositories(db: Session = Depends(get_db)) -> RepositoryListResponse:
 def create_repository(
     payload: RepositoryCreate,
     db: Session = Depends(get_db),
+    response_language: ResponseLanguage | None = Depends(get_response_language),
 ) -> RepositoryRead:
     service = RepositoryService(db)
     try:
-        return service.create_repository(payload)
+        return service.create_repository(payload, response_language)
     except RepositoryValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -51,14 +54,21 @@ def get_repository_tree(
     path: str = Query(default=""),
     depth: int = Query(default=3, ge=1, le=8),
     db: Session = Depends(get_db),
+    response_language: ResponseLanguage | None = Depends(get_response_language),
 ) -> RepositoryTreeResponse:
     repository_service = RepositoryService(db)
     indexing_service = IndexingService(db)
 
     try:
-        repository = repository_service.get_repository(repo_id)
-        root = repository_service.resolve_repository_root(repository)
-        return indexing_service.build_tree(repository, root=root, path=path, depth=depth)
+        repository = repository_service.get_repository(repo_id, response_language)
+        root = repository_service.resolve_repository_root(repository, response_language)
+        return indexing_service.build_tree(
+            repository,
+            root=root,
+            path=path,
+            depth=depth,
+            response_language=response_language,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except (RepositoryValidationError, ValueError) as exc:
@@ -97,13 +107,17 @@ def list_repository_chunks(
 
 
 @router.post("/{repo_id}/index", response_model=RepositoryIndexResponse)
-def request_index(repo_id: int, db: Session = Depends(get_db)) -> RepositoryIndexResponse:
+def request_index(
+    repo_id: int,
+    db: Session = Depends(get_db),
+    response_language: ResponseLanguage | None = Depends(get_response_language),
+) -> RepositoryIndexResponse:
     repository_service = RepositoryService(db)
     indexing_service = IndexingService(db)
 
     try:
-        repository = repository_service.get_repository(repo_id)
-        return indexing_service.request_index(repository)
+        repository = repository_service.get_repository(repo_id, response_language)
+        return indexing_service.request_index(repository, response_language)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except RepositoryValidationError as exc:

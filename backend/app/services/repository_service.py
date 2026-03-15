@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.repository import Repository
+from app.schemas.common import ResponseLanguage
 from app.schemas.repository import RepositoryCreate
 
 CLONE_NAME_SANITIZER = re.compile(r"[^A-Za-z0-9._-]+")
@@ -29,40 +30,91 @@ class RepositoryService:
         query = select(Repository).order_by(Repository.created_at.desc())
         return list(self.db.scalars(query).all())
 
-    def get_repository(self, repo_id: int) -> Repository:
+    def get_repository(
+        self,
+        repo_id: int,
+        response_language: ResponseLanguage | None = None,
+    ) -> Repository:
         repository = self.db.get(Repository, repo_id)
         if repository is None:
-            raise LookupError(f"Repository {repo_id} was not found.")
+            raise LookupError(
+                self._localized_message(
+                    response_language,
+                    f"未找到仓库 #{repo_id}。",
+                    f"Repository {repo_id} was not found.",
+                )
+            )
         return repository
 
-    def resolve_repository_root(self, repository: Repository) -> Path:
+    def resolve_repository_root(
+        self,
+        repository: Repository,
+        response_language: ResponseLanguage | None = None,
+    ) -> Path:
         if not repository.root_path:
             raise RepositoryValidationError(
-                "This repository does not have an available checked-out root_path yet."
+                self._localized_message(
+                    response_language,
+                    "这个仓库目前还没有可用的工作区目录。",
+                    "This repository does not have an available checked-out root_path yet.",
+                )
             )
 
         root = Path(repository.root_path).expanduser().resolve()
         if not root.exists() or not root.is_dir():
-            raise RepositoryValidationError("The repository root_path is missing or is no longer a directory.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "仓库的 root_path 不存在，或已经不再是目录。",
+                    "The repository root_path is missing or is no longer a directory.",
+                )
+            )
         return root
 
-    def resolve_relative_path(self, repository: Repository, relative_path: str) -> Path:
-        root = self.resolve_repository_root(repository)
+    def resolve_relative_path(
+        self,
+        repository: Repository,
+        relative_path: str,
+        response_language: ResponseLanguage | None = None,
+    ) -> Path:
+        root = self.resolve_repository_root(repository, response_language)
         normalized = relative_path.strip().strip("/")
         if not normalized:
-            raise RepositoryValidationError("A repository-relative path is required.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "请提供仓库内的相对路径。",
+                    "A repository-relative path is required.",
+                )
+            )
 
         target = (root / normalized).resolve()
         try:
             target.relative_to(root)
         except ValueError as exc:
-            raise RepositoryValidationError("The requested path must stay inside the repository root.") from exc
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "请求的路径必须位于仓库根目录之内。",
+                    "The requested path must stay inside the repository root.",
+                )
+            ) from exc
 
         if not target.exists():
-            raise RepositoryValidationError("The requested repository path does not exist.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "请求的仓库路径不存在。",
+                    "The requested repository path does not exist.",
+                )
+            )
         return target
 
-    def create_repository(self, payload: RepositoryCreate) -> Repository:
+    def create_repository(
+        self,
+        payload: RepositoryCreate,
+        response_language: ResponseLanguage | None = None,
+    ) -> Repository:
         root_path: str | None = None
         source_url = str(payload.source_url) if payload.source_url else None
         name = payload.name.strip() if payload.name else None
@@ -71,11 +123,17 @@ class RepositoryService:
         if payload.source_type == "local":
             candidate = Path(payload.root_path or "").expanduser().resolve()
             if not candidate.exists() or not candidate.is_dir():
-                raise RepositoryValidationError("The provided local repository path does not exist or is not a directory.")
+                raise RepositoryValidationError(
+                    self._localized_message(
+                        response_language,
+                        "提供的本地仓库路径不存在，或不是目录。",
+                        "The provided local repository path does not exist or is not a directory.",
+                    )
+                )
             root_path = str(candidate)
             derived_name = candidate.name
         else:
-            source_url = self._normalize_github_source_url(source_url)
+            source_url = self._normalize_github_source_url(source_url, response_language)
             derived_name = self._derive_repository_name(source_url)
 
         repository = Repository(
@@ -103,6 +161,7 @@ class RepositoryService:
                     source_url=source_url or "",
                     target_dir=clone_target,
                     default_branch=payload.default_branch,
+                    response_language=response_language,
                 )
                 repository.root_path = str(clone_target.resolve())
                 repository.default_branch = resolved_branch or payload.default_branch
@@ -151,11 +210,18 @@ class RepositoryService:
         source_url: str,
         target_dir: Path,
         default_branch: str | None,
+        response_language: ResponseLanguage | None,
     ) -> str | None:
         settings = get_settings()
         git_executable = shutil.which("git")
         if not git_executable:
-            raise RepositoryValidationError("Git is not available on the server, so GitHub repositories cannot be cloned.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "当前环境没有可用的 git，因此无法克隆 GitHub 仓库。",
+                    "Git is not available on the server, so GitHub repositories cannot be cloned.",
+                )
+            )
 
         clone_command = [
             git_executable,
@@ -185,23 +251,53 @@ class RepositoryService:
         except subprocess.TimeoutExpired as exc:
             shutil.rmtree(target_dir, ignore_errors=True)
             raise RepositoryValidationError(
-                f"Git clone timed out after {settings.git_clone_timeout_seconds} seconds for {source_url}."
+                self._localized_message(
+                    response_language,
+                    f"克隆仓库超时：{settings.git_clone_timeout_seconds} 秒后仍未完成，目标地址为 {source_url}。",
+                    f"Git clone timed out after {settings.git_clone_timeout_seconds} seconds for {source_url}.",
+                )
             ) from exc
         except OSError as exc:
             shutil.rmtree(target_dir, ignore_errors=True)
-            raise RepositoryValidationError(f"Failed to start git clone: {exc}") from exc
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    f"启动 git clone 失败：{exc}",
+                    f"Failed to start git clone: {exc}",
+                )
+            ) from exc
 
         if completed.returncode != 0:
             shutil.rmtree(target_dir, ignore_errors=True)
             stderr = (completed.stderr or completed.stdout or "").strip()
-            stderr = stderr[:400] if stderr else "Unknown git clone error."
-            raise RepositoryValidationError(f"Failed to clone repository: {stderr}")
+            stderr = stderr[:400] if stderr else self._localized_message(
+                response_language,
+                "未知的 git clone 错误。",
+                "Unknown git clone error.",
+            )
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    f"克隆仓库失败：{stderr}",
+                    f"Failed to clone repository: {stderr}",
+                )
+            )
 
         return self._detect_checked_out_branch(target_dir)
 
-    def _normalize_github_source_url(self, source_url: str | None) -> str:
+    def _normalize_github_source_url(
+        self,
+        source_url: str | None,
+        response_language: ResponseLanguage | None,
+    ) -> str:
         if not source_url:
-            raise RepositoryValidationError("source_url is required when source_type is 'github'.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "当 source_type 为 'github' 时，必须提供 source_url。",
+                    "source_url is required when source_type is 'github'.",
+                )
+            )
 
         settings = get_settings()
         parsed = urlparse(source_url)
@@ -209,17 +305,39 @@ class RepositoryService:
         allowed_hosts = {host.lower() for host in settings.allowed_git_hosts}
 
         if parsed.scheme != "https":
-            raise RepositoryValidationError("GitHub imports must use an https repository URL.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "GitHub 导入必须使用 https 仓库地址。",
+                    "GitHub imports must use an https repository URL.",
+                )
+            )
         if parsed.username or parsed.password:
-            raise RepositoryValidationError("GitHub imports do not accept embedded credentials in source_url.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "GitHub 导入不接受在 source_url 中内嵌账号或密码。",
+                    "GitHub imports do not accept embedded credentials in source_url.",
+                )
+            )
         if hostname not in allowed_hosts:
             raise RepositoryValidationError(
-                f"Only configured Git hosts are allowed for repository cloning: {', '.join(sorted(allowed_hosts))}."
+                self._localized_message(
+                    response_language,
+                    f"只允许克隆配置白名单中的 Git 主机：{', '.join(sorted(allowed_hosts))}。",
+                    f"Only configured Git hosts are allowed for repository cloning: {', '.join(sorted(allowed_hosts))}.",
+                )
             )
 
         path_segments = [segment for segment in parsed.path.split("/") if segment]
         if len(path_segments) != 2:
-            raise RepositoryValidationError("GitHub source_url must point to a repository root like https://github.com/org/repo.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "GitHub source_url 必须指向仓库根地址，例如 https://github.com/org/repo 。",
+                    "GitHub source_url must point to a repository root like https://github.com/org/repo.",
+                )
+            )
 
         normalized_path = "/" + "/".join(path_segments)
         return urlunparse(("https", hostname, normalized_path, "", "", ""))
@@ -243,3 +361,13 @@ class RepositoryService:
 
         branch_name = completed.stdout.strip()
         return branch_name or None
+
+    def _localized_message(
+        self,
+        response_language: ResponseLanguage | None,
+        zh_cn_message: str,
+        en_message: str,
+    ) -> str:
+        if response_language == ResponseLanguage.ZH_CN:
+            return zh_cn_message
+        return en_message

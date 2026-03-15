@@ -218,10 +218,11 @@ def test_patch_apply_rejects_stale_draft(client, tmp_path):
             "expected_base_sha256": expected_base_sha256,
             "proposed_content": "value = 3\n",
         },
+        headers={"X-Response-Language": "zh-CN"},
     )
 
     assert apply_response.status_code == 409
-    assert "changed since this draft was generated" in apply_response.json()["detail"]
+    assert "目标文件自草案生成后已经发生变化" in apply_response.json()["detail"]
 
 
 def test_patch_batch_apply_writes_multiple_files_when_hashes_match(client, tmp_path):

@@ -8,6 +8,7 @@ from app.indexing.chunker import LineChunker
 from app.indexing.scanner import RepositoryScanner
 from app.models.file_chunk import FileChunk
 from app.models.repository import Repository
+from app.schemas.common import ResponseLanguage
 from app.schemas.repository import (
     FileChunkListResponse,
     RepositoryIndexResponse,
@@ -25,10 +26,14 @@ class IndexingService:
         self.chunker = LineChunker()
         self.scanner = RepositoryScanner()
 
-    def request_index(self, repository: Repository) -> RepositoryIndexResponse:
+    def request_index(
+        self,
+        repository: Repository,
+        response_language: ResponseLanguage | None = None,
+    ) -> RepositoryIndexResponse:
         from app.services.repository_service import RepositoryService
 
-        root = RepositoryService(self.db).resolve_repository_root(repository)
+        root = RepositoryService(self.db).resolve_repository_root(repository, response_language)
         repository.status = "indexing"
         self.db.add(repository)
         self.db.commit()
@@ -80,7 +85,11 @@ class IndexingService:
         return RepositoryIndexResponse(
             repo_id=repository.id,
             status=repository.status,
-            message=f"Indexed {scan_result.file_count} files into {chunk_count} chunks.",
+            message=self._localized_message(
+                response_language,
+                f"已完成索引：扫描 {scan_result.file_count} 个文件，生成 {chunk_count} 个片段。",
+                f"Indexed {scan_result.file_count} files into {chunk_count} chunks.",
+            ),
             file_count=scan_result.file_count,
             chunk_count=chunk_count,
             skipped_file_count=scan_result.skipped_file_count,
@@ -119,16 +128,29 @@ class IndexingService:
         root: Path,
         path: str = "",
         depth: int = 3,
+        response_language: ResponseLanguage | None = None,
     ) -> RepositoryTreeResponse:
         relative_path = path.strip().strip("/")
         target = root if not relative_path else (root / relative_path).resolve()
         try:
             target.relative_to(root)
         except ValueError as exc:
-            raise ValueError("The requested tree path must stay inside the repository root.") from exc
+            raise ValueError(
+                self._localized_message(
+                    response_language,
+                    "请求的目录树路径必须位于仓库根目录之内。",
+                    "The requested tree path must stay inside the repository root.",
+                )
+            ) from exc
 
         if not target.exists() or not target.is_dir():
-            raise ValueError("The requested tree path does not exist or is not a directory.")
+            raise ValueError(
+                self._localized_message(
+                    response_language,
+                    "请求的目录树路径不存在，或不是目录。",
+                    "The requested tree path does not exist or is not a directory.",
+                )
+            )
 
         nodes = self._build_tree_nodes(target, root=root, depth=depth)
         return RepositoryTreeResponse(
@@ -187,3 +209,13 @@ class IndexingService:
         file_count = int(self.db.scalar(file_count_query) or 0)
         chunk_count = int(self.db.scalar(chunk_count_query) or 0)
         return file_count, chunk_count
+
+    def _localized_message(
+        self,
+        response_language: ResponseLanguage | None,
+        zh_cn_message: str,
+        en_message: str,
+    ) -> str:
+        if response_language == ResponseLanguage.ZH_CN:
+            return zh_cn_message
+        return en_message

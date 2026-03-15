@@ -25,7 +25,7 @@ def test_create_and_list_local_repository(client, tmp_path):
 def test_create_github_repository_clones_into_managed_repos(client, monkeypatch):
     from app.services.repository_service import RepositoryService
 
-    def fake_clone(self, *, source_url, target_dir, default_branch):
+    def fake_clone(self, *, source_url, target_dir, default_branch, response_language=None):
         target_dir.mkdir(parents=True, exist_ok=True)
         (target_dir / "README.md").write_text("# cloned\n", encoding="utf-8")
         return default_branch or "main"
@@ -53,7 +53,7 @@ def test_create_github_repository_clones_into_managed_repos(client, monkeypatch)
 def test_index_github_repository_after_clone(client, monkeypatch):
     from app.services.repository_service import RepositoryService
 
-    def fake_clone(self, *, source_url, target_dir, default_branch):
+    def fake_clone(self, *, source_url, target_dir, default_branch, response_language=None):
         target_dir.mkdir(parents=True, exist_ok=True)
         (target_dir / "service.py").write_text("def greet() -> str:\n    return 'hi'\n", encoding="utf-8")
         return default_branch or "main"
@@ -77,6 +77,28 @@ def test_index_github_repository_after_clone(client, monkeypatch):
     assert payload["chunk_count"] >= 1
 
 
+def test_index_repository_respects_language_header(client, tmp_path):
+    repository_dir = tmp_path / "localized-index-repo"
+    repository_dir.mkdir()
+    (repository_dir / "service.py").write_text("def greet() -> str:\n    return 'hi'\n", encoding="utf-8")
+
+    create_response = client.post(
+        "/api/repositories",
+        json={
+            "source_type": "local",
+            "root_path": str(repository_dir),
+        },
+    )
+    repo_id = create_response.json()["id"]
+
+    index_response = client.post(
+        f"/api/repositories/{repo_id}/index",
+        headers={"X-Response-Language": "zh-CN"},
+    )
+    assert index_response.status_code == 200
+    assert index_response.json()["message"] == "已完成索引：扫描 1 个文件，生成 1 个片段。"
+
+
 def test_create_github_repository_rejects_non_github_host(client):
     response = client.post(
         "/api/repositories",
@@ -84,7 +106,8 @@ def test_create_github_repository_rejects_non_github_host(client):
             "source_type": "github",
             "source_url": "https://example.com/not-github/repo",
         },
+        headers={"X-Response-Language": "zh-CN"},
     )
 
     assert response.status_code == 400
-    assert "Only configured Git hosts are allowed" in response.json()["detail"]
+    assert "只允许克隆配置白名单中的 Git 主机" in response.json()["detail"]

@@ -258,7 +258,7 @@ export function usePatchChecksWorkspace({
         proposed_content: draft.proposed_content,
         repo_id: draft.repo_id,
         target_path: draft.target_path,
-      });
+      }, locale);
       setPatchApplyResponse(response);
       setStatusMessage(copy.feedback.applyPatchDone(response.target_path));
     } catch (applyError) {
@@ -285,7 +285,7 @@ export function usePatchChecksWorkspace({
           target_path: draft.target_path,
         })),
         repo_id: repoId,
-      });
+      }, locale);
       setPatchApplyResponse(null);
       setPatchBatchApplyResponse(response);
       setStatusMessage(copy.feedback.applyPatchBatchDone(response.applied_count, response.noop_count));

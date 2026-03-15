@@ -39,10 +39,16 @@ class ChatService:
     async def ask(self, payload: ChatAskRequest) -> ChatAskResponse:
         settings = get_settings()
         if not os.getenv("OPENAI_API_KEY"):
-            raise ChatConfigurationError("OPENAI_API_KEY is not configured. Set it before calling /api/chat/ask.")
+            raise ChatConfigurationError(
+                self._localized_message(
+                    payload.response_language,
+                    "OPENAI_API_KEY 尚未配置，请先设置后再调用 /api/chat/ask。",
+                    "OPENAI_API_KEY is not configured. Set it before calling /api/chat/ask.",
+                )
+            )
 
         repository = self.repository_service.get_repository(payload.repo_id)
-        self._validate_repository_for_chat(repository)
+        self._validate_repository_for_chat(repository, payload.response_language)
 
         session_id = payload.session_id or uuid4().hex
         logger.info(
@@ -120,22 +126,44 @@ class ChatService:
         result = await Runner.run(agent, user_input, context=run_context)
         final_output = result.final_output
         if not isinstance(final_output, CodeAssistantFinalOutput):
-            raise ChatConfigurationError("The code assistant returned an unexpected output type.")
+            raise ChatConfigurationError(
+                self._localized_message(
+                    response_language,
+                    "代码问答助手返回了意外的输出类型。",
+                    "The code assistant returned an unexpected output type.",
+                )
+            )
 
         agent_name = getattr(getattr(result, "last_agent", None), "name", agent.name)
         return final_output, agent_name
 
-    def _validate_repository_for_chat(self, repository: Repository) -> None:
-        self.repository_service.resolve_repository_root(repository)
+    def _validate_repository_for_chat(
+        self,
+        repository: Repository,
+        response_language: ResponseLanguage | None,
+    ) -> None:
+        self.repository_service.resolve_repository_root(repository, response_language)
         if repository.status != "ready":
-            raise RepositoryValidationError("Index the repository first before asking questions.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "请先为仓库建立索引，再发起问答。",
+                    "Index the repository first before asking questions.",
+                )
+            )
 
         chunk_count = int(
             self.db.scalar(select(func.count(FileChunk.id)).where(FileChunk.repo_id == repository.id))
             or 0
         )
         if chunk_count == 0:
-            raise RepositoryValidationError("The repository has no indexed chunks yet. Trigger indexing first.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "这个仓库还没有可用的索引片段，请先触发索引。",
+                    "The repository has no indexed chunks yet. Trigger indexing first.",
+                )
+            )
 
     def _build_user_input(
         self,
@@ -160,3 +188,13 @@ class ChatService:
         if response_language == ResponseLanguage.EN:
             return "English"
         return None
+
+    def _localized_message(
+        self,
+        response_language: ResponseLanguage | None,
+        zh_cn_message: str,
+        en_message: str,
+    ) -> str:
+        if response_language == ResponseLanguage.ZH_CN:
+            return zh_cn_message
+        return en_message

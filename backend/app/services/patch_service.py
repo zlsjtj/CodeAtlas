@@ -67,15 +67,20 @@ class PatchService:
         self.check_service = CheckService(db)
         self.repository_service = RepositoryService(db)
 
-    async def draft_patch(self, payload: PatchDraftRequest) -> PatchDraftResponse:
+    async def draft_patch(
+        self,
+        payload: PatchDraftRequest,
+        response_language: ResponseLanguage | None = None,
+    ) -> PatchDraftResponse:
+        effective_language = payload.response_language or response_language
         session_id = payload.session_id or uuid4().hex
-        settings, repository = self._prepare_patch_drafting(payload.repo_id)
+        settings, repository = self._prepare_patch_drafting(payload.repo_id, effective_language)
         draft_file = await self._draft_patch_file(
             repository=repository,
             target_path=payload.target_path,
             instruction=payload.instruction,
             model=settings.openai_model,
-            response_language=payload.response_language,
+            response_language=effective_language,
         )
         return PatchDraftResponse(
             session_id=session_id,
@@ -83,12 +88,17 @@ class PatchService:
             **draft_file.model_dump(),
         )
 
-    async def draft_patch_batch(self, payload: PatchBatchDraftRequest) -> PatchBatchDraftResponse:
+    async def draft_patch_batch(
+        self,
+        payload: PatchBatchDraftRequest,
+        response_language: ResponseLanguage | None = None,
+    ) -> PatchBatchDraftResponse:
+        effective_language = payload.response_language or response_language
         session_id = payload.session_id or uuid4().hex
-        settings, repository = self._prepare_patch_drafting(payload.repo_id)
+        settings, repository = self._prepare_patch_drafting(payload.repo_id, effective_language)
         target_paths, batch_warnings = self._normalize_target_paths(
             payload.target_paths,
-            payload.response_language,
+            effective_language,
         )
 
         started_at = perf_counter()
@@ -100,7 +110,7 @@ class PatchService:
                     target_path=target_path,
                     instruction=payload.instruction,
                     model=settings.openai_model,
-                    response_language=payload.response_language,
+                    response_language=effective_language,
                 )
             )
         latency_ms = int((perf_counter() - started_at) * 1000)
@@ -119,7 +129,7 @@ class PatchService:
         if diff_free_count:
             warnings.append(
                 self._localized_message(
-                    payload.response_language,
+                    effective_language,
                     f"有 {diff_free_count} 个文件没有产生可见文本差异。应用前请先查看各文件自己的 warning。",
                     f"{diff_free_count} file(s) did not produce a textual diff. Review the item-level warnings before applying anything.",
                 )
@@ -130,7 +140,7 @@ class PatchService:
             repo_id=payload.repo_id,
             target_paths=target_paths,
             summary=self._localized_message(
-                payload.response_language,
+                effective_language,
                 f"已为 {changed_file_count} 个文件生成改动草案。建议先查看合并 diff，再决定逐步应用哪些改动。",
                 f"Generated patch drafts for {changed_file_count} file(s). Review the grouped diffs first, then apply accepted changes one file at a time.",
             ),
@@ -148,7 +158,11 @@ class PatchService:
             ),
         )
 
-    def apply_patch(self, payload: PatchApplyRequest) -> PatchApplyResponse:
+    def apply_patch(
+        self,
+        payload: PatchApplyRequest,
+        response_language: ResponseLanguage | None = None,
+    ) -> PatchApplyResponse:
         prepared_items = self._prepare_patch_apply_items(
             payload.repo_id,
             [
@@ -158,22 +172,29 @@ class PatchService:
                     proposed_content=payload.proposed_content,
                 )
             ],
+            response_language,
         )
-        return self._write_prepared_patches(prepared_items)[0]
+        return self._write_prepared_patches(prepared_items, response_language)[0]
 
-    def apply_patch_batch(self, payload: PatchBatchApplyRequest) -> PatchBatchApplyResponse:
-        prepared_items = self._prepare_patch_apply_items(payload.repo_id, payload.items)
-        results = self._write_prepared_patches(prepared_items)
-        return self._build_batch_apply_response(payload.repo_id, results)
+    def apply_patch_batch(
+        self,
+        payload: PatchBatchApplyRequest,
+        response_language: ResponseLanguage | None = None,
+    ) -> PatchBatchApplyResponse:
+        prepared_items = self._prepare_patch_apply_items(payload.repo_id, payload.items, response_language)
+        results = self._write_prepared_patches(prepared_items, response_language)
+        return self._build_batch_apply_response(payload.repo_id, results, response_language)
 
     def apply_patch_and_run_checks(
         self,
         payload: PatchApplyAndCheckRequest,
+        response_language: ResponseLanguage | None = None,
     ) -> PatchApplyAndCheckResponse:
+        effective_language = payload.response_language or response_language
         self._validate_check_profile_selection(
             payload.repo_id,
             payload.profile_ids,
-            payload.response_language,
+            effective_language,
         )
         prepared_items = self._prepare_patch_apply_items(
             payload.repo_id,
@@ -184,13 +205,14 @@ class PatchService:
                     proposed_content=payload.proposed_content,
                 )
             ],
+            effective_language,
         )
-        patch_result = self._write_prepared_patches(prepared_items)[0]
+        patch_result = self._write_prepared_patches(prepared_items, effective_language)[0]
         check_result = self.check_service.run_checks(
             CheckRunRequest(
                 repo_id=payload.repo_id,
                 profile_ids=payload.profile_ids,
-                response_language=payload.response_language,
+                response_language=effective_language,
             )
         )
         if check_result.status in {"failed", "error"}:
@@ -198,7 +220,7 @@ class PatchService:
                 prepared_items[0],
                 patch_result,
                 check_result.summary,
-                payload.response_language,
+                effective_language,
             )
         return PatchApplyAndCheckResponse(
             patch=patch_result,
@@ -208,20 +230,22 @@ class PatchService:
     def apply_patch_batch_and_run_checks(
         self,
         payload: PatchBatchApplyAndCheckRequest,
+        response_language: ResponseLanguage | None = None,
     ) -> PatchBatchApplyAndCheckResponse:
+        effective_language = payload.response_language or response_language
         self._validate_check_profile_selection(
             payload.repo_id,
             payload.profile_ids,
-            payload.response_language,
+            effective_language,
         )
-        prepared_items = self._prepare_patch_apply_items(payload.repo_id, payload.items)
-        batch_results = self._write_prepared_patches(prepared_items)
-        patch_result = self._build_batch_apply_response(payload.repo_id, batch_results)
+        prepared_items = self._prepare_patch_apply_items(payload.repo_id, payload.items, effective_language)
+        batch_results = self._write_prepared_patches(prepared_items, effective_language)
+        patch_result = self._build_batch_apply_response(payload.repo_id, batch_results, effective_language)
         check_result = self.check_service.run_checks(
             CheckRunRequest(
                 repo_id=payload.repo_id,
                 profile_ids=payload.profile_ids,
-                response_language=payload.response_language,
+                response_language=effective_language,
             )
         )
         if check_result.status in {"failed", "error"}:
@@ -229,22 +253,30 @@ class PatchService:
                 prepared_items,
                 patch_result,
                 check_result.summary,
-                payload.response_language,
+                effective_language,
             )
         return PatchBatchApplyAndCheckResponse(
             patch=patch_result,
             checks=check_result,
         )
 
-    def _prepare_patch_drafting(self, repo_id: int):
+    def _prepare_patch_drafting(
+        self,
+        repo_id: int,
+        response_language: ResponseLanguage | None,
+    ):
         settings = get_settings()
         if not os.getenv("OPENAI_API_KEY"):
             raise PatchConfigurationError(
-                "OPENAI_API_KEY is not configured. Set it before calling /api/patches/draft."
+                self._localized_message(
+                    response_language,
+                    "OPENAI_API_KEY 尚未配置，请先设置后再调用 /api/patches/draft。",
+                    "OPENAI_API_KEY is not configured. Set it before calling /api/patches/draft.",
+                )
             )
 
-        repository = self.repository_service.get_repository(repo_id)
-        self.repository_service.resolve_repository_root(repository)
+        repository = self.repository_service.get_repository(repo_id, response_language)
+        self.repository_service.resolve_repository_root(repository, response_language)
 
         return settings, repository
 
@@ -277,7 +309,11 @@ class PatchService:
         response_language: ResponseLanguage | None,
     ) -> PatchDraftFile:
         normalized_target_path = target_path.strip().strip("/")
-        _, original_content = self._read_target_file_from_repository(repository, normalized_target_path)
+        _, original_content = self._read_target_file_from_repository(
+            repository,
+            normalized_target_path,
+            response_language,
+        )
         prompt = self._build_prompt(
             repo_name=repository.name,
             target_path=normalized_target_path,
@@ -331,28 +367,58 @@ class PatchService:
             ),
         )
 
-    def _read_target_file(self, repo_id: int, target_path: str) -> tuple[Path, str]:
-        repository = self.repository_service.get_repository(repo_id)
-        return self._read_target_file_from_repository(repository, target_path)
+    def _read_target_file(
+        self,
+        repo_id: int,
+        target_path: str,
+        response_language: ResponseLanguage | None,
+    ) -> tuple[Path, str]:
+        repository = self.repository_service.get_repository(repo_id, response_language)
+        return self._read_target_file_from_repository(repository, target_path, response_language)
 
-    def _read_target_file_from_repository(self, repository, target_path: str) -> tuple[Path, str]:
-        file_path = self.repository_service.resolve_relative_path(repository, target_path)
+    def _read_target_file_from_repository(
+        self,
+        repository,
+        target_path: str,
+        response_language: ResponseLanguage | None,
+    ) -> tuple[Path, str]:
+        file_path = self.repository_service.resolve_relative_path(repository, target_path, response_language)
         if not file_path.is_file():
-            raise RepositoryValidationError("The target_path must point to a file inside the repository.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "target_path 必须指向仓库内的文件。",
+                    "The target_path must point to a file inside the repository.",
+                )
+            )
 
         try:
             content = file_path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:
-            raise RepositoryValidationError("Patch drafting currently supports UTF-8 text files only.") from exc
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "当前只支持对 UTF-8 文本文件生成 patch 草案。",
+                    "Patch drafting currently supports UTF-8 text files only.",
+                )
+            ) from exc
 
         line_count = self._count_lines(content)
         if len(content) > MAX_PATCH_FILE_CHARS:
             raise RepositoryValidationError(
-                f"The target file is too large for a patch draft preview. Keep it under {MAX_PATCH_FILE_CHARS} characters."
+                self._localized_message(
+                    response_language,
+                    f"目标文件过大，无法生成 patch 预览。请将文件控制在 {MAX_PATCH_FILE_CHARS} 个字符以内。",
+                    f"The target file is too large for a patch draft preview. Keep it under {MAX_PATCH_FILE_CHARS} characters.",
+                )
             )
         if line_count > MAX_PATCH_FILE_LINES:
             raise RepositoryValidationError(
-                f"The target file is too large for a patch draft preview. Keep it under {MAX_PATCH_FILE_LINES} lines."
+                self._localized_message(
+                    response_language,
+                    f"目标文件过大，无法生成 patch 预览。请将文件控制在 {MAX_PATCH_FILE_LINES} 行以内。",
+                    f"The target file is too large for a patch draft preview. Keep it under {MAX_PATCH_FILE_LINES} lines.",
+                )
             )
 
         return file_path, content
@@ -383,10 +449,20 @@ class PatchService:
             normalized_paths.append(normalized_target_path)
 
         if not normalized_paths:
-            raise RepositoryValidationError("Provide at least one non-empty target path for a batch draft.")
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "批量草案至少需要提供一个非空的目标路径。",
+                    "Provide at least one non-empty target path for a batch draft.",
+                )
+            )
         if len(normalized_paths) > MAX_BATCH_PATCH_FILES:
             raise RepositoryValidationError(
-                f"Batch patch preview currently supports up to {MAX_BATCH_PATCH_FILES} files per request."
+                self._localized_message(
+                    response_language,
+                    f"当前批量 patch 预览每次最多支持 {MAX_BATCH_PATCH_FILES} 个文件。",
+                    f"Batch patch preview currently supports up to {MAX_BATCH_PATCH_FILES} files per request.",
+                )
             )
 
         return normalized_paths, warnings
@@ -395,9 +471,10 @@ class PatchService:
         self,
         repo_id: int,
         items: list[PatchApplyFile],
+        response_language: ResponseLanguage | None,
     ) -> list[PreparedPatchApply]:
-        repository = self.repository_service.get_repository(repo_id)
-        self.repository_service.resolve_repository_root(repository)
+        repository = self.repository_service.get_repository(repo_id, response_language)
+        self.repository_service.resolve_repository_root(repository, response_language)
 
         prepared_items: list[PreparedPatchApply] = []
         seen_paths: set[str] = set()
@@ -406,16 +483,28 @@ class PatchService:
             normalized_target_path = item.target_path.strip().strip("/")
             if normalized_target_path in seen_paths:
                 raise RepositoryValidationError(
-                    f"Duplicate target path is not allowed in a batch apply request: {normalized_target_path}."
+                    self._localized_message(
+                        response_language,
+                        f"批量应用请求里不允许出现重复目标路径：{normalized_target_path}。",
+                        f"Duplicate target path is not allowed in a batch apply request: {normalized_target_path}.",
+                    )
                 )
             seen_paths.add(normalized_target_path)
 
-            file_path, current_content = self._read_target_file_from_repository(repository, normalized_target_path)
+            file_path, current_content = self._read_target_file_from_repository(
+                repository,
+                normalized_target_path,
+                response_language,
+            )
             current_hash = self._hash_content(current_content)
             if current_hash != item.expected_base_sha256:
                 raise PatchConflictError(
-                    f"The target file changed since this draft was generated: {normalized_target_path}. "
-                    "Re-generate the patch draft before applying."
+                    self._localized_message(
+                        response_language,
+                        f"目标文件自草案生成后已经发生变化：{normalized_target_path}。请重新生成 patch 草案后再应用。",
+                        f"The target file changed since this draft was generated: {normalized_target_path}. "
+                        "Re-generate the patch draft before applying.",
+                    )
                 )
 
             proposed_content = self._normalize_content(item.proposed_content)
@@ -438,7 +527,11 @@ class PatchService:
 
         return prepared_items
 
-    def _write_prepared_patches(self, prepared_items: list[PreparedPatchApply]) -> list[PatchApplyResponse]:
+    def _write_prepared_patches(
+        self,
+        prepared_items: list[PreparedPatchApply],
+        response_language: ResponseLanguage | None,
+    ) -> list[PatchApplyResponse]:
         rollback_snapshots: list[tuple[Path, str]] = []
         results: list[PatchApplyResponse] = []
 
@@ -450,7 +543,11 @@ class PatchService:
                             repo_id=prepared.repo_id,
                             target_path=prepared.target_path,
                             status="noop",
-                            message="The proposed content already matches the current file. Nothing was written.",
+                            message=self._localized_message(
+                                response_language,
+                                "草案内容与当前文件一致，因此没有写入任何改动。",
+                                "The proposed content already matches the current file. Nothing was written.",
+                            ),
                             previous_sha256=prepared.current_hash,
                             written_sha256=prepared.current_hash,
                             written_line_count=self._count_lines(prepared.current_content),
@@ -467,7 +564,11 @@ class PatchService:
                         repo_id=prepared.repo_id,
                         target_path=prepared.target_path,
                         status="applied",
-                        message="The patch draft was written to the working tree successfully.",
+                        message=self._localized_message(
+                            response_language,
+                            "Patch 草案已成功写入工作区。",
+                            "The patch draft was written to the working tree successfully.",
+                        ),
                         previous_sha256=prepared.current_hash,
                         written_sha256=written_hash,
                         written_line_count=self._count_lines(prepared.proposed_content),
@@ -478,7 +579,11 @@ class PatchService:
             for file_path, original_content in reversed(rollback_snapshots):
                 file_path.write_text(original_content, encoding="utf-8")
             raise RepositoryValidationError(
-                "Failed to apply the requested patch set cleanly. Any earlier file writes were rolled back."
+                self._localized_message(
+                    response_language,
+                    "应用这组 patch 时发生错误，之前已经写入的文件都已自动回滚。",
+                    "Failed to apply the requested patch set cleanly. Any earlier file writes were rolled back.",
+                )
             ) from exc
 
         if prepared_items:
@@ -494,6 +599,7 @@ class PatchService:
         self,
         repo_id: int,
         results: list[PatchApplyResponse],
+        response_language: ResponseLanguage | None,
     ) -> PatchBatchApplyResponse:
         applied_count = sum(1 for item in results if item.status == "applied")
         noop_count = len(results) - applied_count
@@ -502,14 +608,24 @@ class PatchService:
         combined_unified_diff = "\n\n".join(item.unified_diff for item in results if item.unified_diff)
 
         if applied_count > 0 and noop_count > 0:
-            message = (
+            message = self._localized_message(
+                response_language,
+                f"已成功应用 {applied_count} 个文件，另有 {noop_count} 个文件本来就与草案一致。",
                 f"Applied {applied_count} file(s) successfully. "
-                f"{noop_count} file(s) already matched the proposed content."
+                f"{noop_count} file(s) already matched the proposed content.",
             )
         elif applied_count > 0:
-            message = f"Applied {applied_count} file(s) to the working tree successfully."
+            message = self._localized_message(
+                response_language,
+                f"已成功将 {applied_count} 个文件写入工作区。",
+                f"Applied {applied_count} file(s) to the working tree successfully.",
+            )
         else:
-            message = "All selected files already matched the proposed content. Nothing was written."
+            message = self._localized_message(
+                response_language,
+                "所有选中文件都已经与草案内容一致，因此没有写入任何改动。",
+                "All selected files already matched the proposed content. Nothing was written.",
+            )
 
         return PatchBatchApplyResponse(
             repo_id=repo_id,
