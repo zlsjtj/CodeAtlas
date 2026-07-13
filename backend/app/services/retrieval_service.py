@@ -27,12 +27,14 @@ SYMBOL_PATTERNS: list[tuple[set[str], str, re.Pattern[str]]] = [
     (
         {".js", ".jsx", ".ts", ".tsx"},
         "function",
-        re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+(?P<name>[A-Za-z_$][\w$]*)\s*\("),
+        re.compile(
+            r"^\s*(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s+(?P<name>[A-Za-z_$][\w$]*)\s*\("
+        ),
     ),
     (
         {".js", ".jsx", ".ts", ".tsx"},
         "class",
-        re.compile(r"^\s*(?:export\s+)?class\s+(?P<name>[A-Za-z_$][\w$]*)\b"),
+        re.compile(r"^\s*(?:export\s+(?:default\s+)?)?class\s+(?P<name>[A-Za-z_$][\w$]*)\b"),
     ),
     (
         {".ts", ".tsx"},

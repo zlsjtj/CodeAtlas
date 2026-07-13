@@ -78,6 +78,47 @@ def test_search_read_and_find_symbol_tools(client, tmp_path):
     assert symbol_payload["items"][0]["path"] == "src/helper.ts"
 
 
+def test_find_symbol_supports_default_typescript_exports(client, tmp_path):
+    repository_dir = tmp_path / "default-export-repo"
+    (repository_dir / "src").mkdir(parents=True)
+    (repository_dir / "src" / "page.tsx").write_text(
+        "\n".join(
+            [
+                "export default function HomePage() {",
+                "  return null;",
+                "}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (repository_dir / "src" / "api-client.ts").write_text(
+        "export default class ApiClient {}\n",
+        encoding="utf-8",
+    )
+
+    create_response = client.post(
+        "/api/repositories",
+        json={"source_type": "local", "root_path": str(repository_dir)},
+    )
+    repo_id = create_response.json()["id"]
+    assert client.post(f"/api/repositories/{repo_id}/index").status_code == 200
+
+    function_response = client.post(
+        "/api/tools/find-symbol",
+        json={"repo_id": repo_id, "name": "HomePage"},
+    )
+    class_response = client.post(
+        "/api/tools/find-symbol",
+        json={"repo_id": repo_id, "name": "ApiClient"},
+    )
+
+    assert function_response.json()["items"][0]["symbol_type"] == "function"
+    assert function_response.json()["items"][0]["path"] == "src/page.tsx"
+    assert class_response.json()["items"][0]["symbol_type"] == "class"
+    assert class_response.json()["items"][0]["path"] == "src/api-client.ts"
+
+
 def test_read_file_limits_range_size(client, tmp_path):
     repository_dir = tmp_path / "limits-repo"
     repository_dir.mkdir()
