@@ -45,7 +45,9 @@ async function search(query) {
 async function inspect(items, filename, line, query) {
   const item = items.find((item) => item.path === filename && item.start_line <= line && item.end_line >= line);
   if (!item) throw new Error("Expected source not in search results: " + filename + ":" + line);
-  await page.locator(".search-result").filter({ hasText: filename + ":" + item.start_line }).first().click();
+  const result = page.locator(".search-result").filter({ hasText: filename + ":" + item.start_line }).first();
+  await result.click();
+  await expect(result).toHaveAttribute("aria-current", "true");
   await expect(page.locator(".source-path")).toHaveText(filename);
   await expect(page.locator(".source-line").first()).toBeVisible();
   const start = Number(await page.locator(".line-number").first().textContent());
@@ -54,6 +56,7 @@ async function inspect(items, filename, line, query) {
   const expected = bytes.toString("utf8").split(/\r?\n/).slice(start - 1, start - 1 + displayed.length).map((text) => text || " ");
   expect(displayed).toEqual(expected);
   expect(displayed.length).toBeLessThanOrEqual(200);
+  expect(await page.locator(".source-code mark").count()).toBeGreaterThan(0);
   await focusLine(line);
   verification.push({ query, path: filename, start_line: start, end_line: start + displayed.length - 1,
     focus_line: line, displayed_lines_match_checkout: true, source_sha256: createHash("sha256").update(bytes).digest("hex") });
@@ -78,7 +81,6 @@ try {
   await inspect(await search("callback=f"), "src/click/decorators.py", 248, "callback=f");
   await page.getByRole("button", { name: labels.wrap }).click();
   await focusLine(248);
-  await page.getByRole("textbox", { name: labels.search }).clear();
   await page.screenshot({ path: path.join(output, "poster.png") });
 
   const started = Date.now();
@@ -119,7 +121,7 @@ try {
   const receipt = {
     recorded_at: new Date().toISOString(), repository: "pallets/click", commit: clickExample.commit,
     locale, viewport, mobile_viewport: mobileViewport, duration_ms: duration, model_calls: modelCalls,
-    mocked_responses: false, speed: "original", initial_state: "Click indexed; decorator source already open",
+    mocked_responses: false, speed: "original", initial_state: "Click indexed; callback=f query, selected result and highlighted decorator source visible",
     verification, frames, network,
   };
   writeFileSync(path.join(output, "recording.json"), JSON.stringify(receipt, null, 2));

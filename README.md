@@ -1,11 +1,8 @@
 # CodeAtlas
 
-本地代码阅读工作台：搜索符号、查看上下文，把解释对回源码。
+把陌生仓库放到一个本地工作台里读：搜索关键词或符号，沿行号核对源码。基础阅读不需要模型 Key。
 
-[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml)
-[MIT](LICENSE) · 中文 | [English](README.en.md)
-
-把目录、搜索结果和带行号源码放在一起读，不需要模型 Key。需要解释时再接入模型，点击回答中的引用核对原文。
+[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE) · 中文 | [English](README.en.md)
 
 ## 从一个问题开始
 
@@ -17,7 +14,7 @@
   <img alt="在 Click 中搜索 callback=f，查看装饰器如何保存回调，再定位执行回调的源码" src="docs/assets/codeatlas-reading.gif">
 </picture>
 
-真实工作台录屏，原速、无模型调用。手机显示单栏静态画面；[完整动画](docs/assets/codeatlas-reading.gif) · [案例与录制记录](docs/reading-example.md)。模型问答尚未完成真实案例验收。
+约 28 秒实录，原速、无模型调用。手机显示单栏静态画面。[完整动画](docs/assets/codeatlas-reading.gif) · [案例与源码核对记录](docs/reading-example.md)
 
 在这个固定版本里，阅读路径是：
 
@@ -40,9 +37,9 @@ npm run demo
 
 打开终端打印的地址。Click 已导入并索引，直接在“关键词”里搜索 `callback=f`，点击结果即可跟着上面的例子阅读。首次运行会从 GitHub 下载固定提交。
 
-示例用独立的 `data/demo` 数据库和 `repos/examples` 源码目录，不覆盖 `.env`，也不使用其中的模型 Key。重复运行复用同一份源码；检测到本地改动会停止，不会替你重置。退出按 `Ctrl+C`。
+退出按 `Ctrl+C`。示例使用独立数据，不覆盖 `.env`，也不使用其中的模型 Key。
 
-读自己的仓库用 `npm run dev`，点击顶部 `+` 导入本地目录或公开 GitHub 仓库，再建立索引。Windows PowerShell 和 Ubuntu 使用相同命令；端口占用会自动换到空闲端口。[启动细节](docs/development.md)
+读自己的仓库用 `npm run dev`，点击顶部 `+` 导入本地目录或公开 GitHub 仓库，再建立索引。[Windows / Ubuntu 启动、端口与数据目录](docs/development.md)
 
 ### Docker Compose
 
@@ -58,7 +55,7 @@ docker compose up --build --wait
 
 在根目录 `.env` 配置 `OPENAI_API_KEY`、`CODE_AGENT_OPENAI_MODEL`，兼容服务另设 `OPENAI_BASE_URL`，然后用 `npm run dev` 启动。Docker 修改配置后重新执行 Compose 命令。
 
-问答和草案会把相关源码发送给模型服务，并产生 API 费用。Key 只交给后端；配置存在不代表服务可用。[真实问答验收状态](docs/evidence/qa-status.json)
+问答和草案会把相关源码发送给模型服务，并产生 API 费用。Key 只交给后端；配置存在不代表服务可用。六条真实问答案例尚未执行，不能据此评价回答质量。[验收状态](docs/evidence/qa-status.json)
 
 ## 使用边界
 

@@ -1,11 +1,8 @@
 # CodeAtlas
 
-Read unfamiliar codebases in a local workspace.
+Read unfamiliar codebases in a local workspace: search text or symbols, then follow the source with line numbers. No model key needed for code reading.
 
-[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml)
-[MIT](LICENSE) · [中文](README.md) | English
-
-Browse files, search symbols, and read source in one workspace, without a model key. Connect a model when you need explanations and inspect its references.
+[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE) · [中文](README.md) | English
 
 ## Follow One Question
 
@@ -17,7 +14,7 @@ Browse files, search symbols, and read source in one workspace, without a model 
   <img alt="Searching callback=f in Click, inspecting how the decorator stores the function, then finding the callback invocation" src="docs/assets/codeatlas-reading-en.gif">
 </picture>
 
-Actual workspace recording at original speed, with no model calls. Phones show a single-column still. [Full animation](docs/assets/codeatlas-reading-en.gif) · [Case and recording details](docs/reading-example.en.md). Real-model Q&A has not yet been validated against the fixed cases.
+About 28 seconds of actual use, at original speed with no model calls. Phones show a single-column still. [Full animation](docs/assets/codeatlas-reading-en.gif) · [Case and source checks](docs/reading-example.en.md)
 
 In the pinned checkout:
 
@@ -40,9 +37,9 @@ npm run demo
 
 Open the printed URL. Click is already imported and indexed: search `callback=f` in Text mode and open a result to follow the example. The first run downloads the pinned commit from GitHub.
 
-The example uses a separate database in `data/demo` and checkout in `repos/examples`. It leaves `.env` unchanged and does not use your model key. Repeated runs reuse the checkout; local changes stop setup instead of being reset. Press `Ctrl+C` to stop.
+Press `Ctrl+C` to stop. The example uses separate data, leaves `.env` unchanged, and does not use your model key.
 
-For your own repositories, use `npm run dev`, import a local directory or public GitHub repository with the top `+` button, then index it. The commands work in Windows PowerShell and Ubuntu. Occupied ports are skipped automatically. [Startup details](docs/development.md)
+For your own repositories, use `npm run dev`, import a local directory or public GitHub repository with the top `+` button, then index it. [Windows / Ubuntu setup, ports and data directories](docs/development.md)
 
 ### Docker Compose
 
@@ -58,7 +55,7 @@ Open [127.0.0.1:3000](http://127.0.0.1:3000) and import a public repository. Doc
 
 Set `OPENAI_API_KEY` and `CODE_AGENT_OPENAI_MODEL` in the root `.env`; compatible services can also use `OPENAI_BASE_URL`. Start with `npm run dev`, or rerun Compose after changing configuration.
 
-Q&A and drafts send relevant source to the model service and incur API costs. Keys stay on the backend. A configured key does not establish service availability. [Real-model validation status](docs/evidence/qa-status.json)
+Q&A and drafts send relevant source to the model service and incur API costs. Keys stay on the backend. A configured key does not establish service availability. The six real-model cases have not been run; answer quality is not yet evaluated. [Validation status](docs/evidence/qa-status.json)
 
 ## Limits
 

@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronRight, FileCode2, Folder, RefreshCw, Search, WrapText } from "lucide-react";
 import type { SourceTarget, useRepositoryReader } from "@/lib/hooks/use-repository-reader";
 import type { WorkspaceLocale } from "@/lib/workspace-i18n";
+import { highlightMatches, sourceLines, type SourceToken } from "@/lib/source-highlighting";
 
 type Reader = ReturnType<typeof useRepositoryReader>;
+
+function HighlightedLine({ tokens, query = "" }: { tokens: SourceToken[]; query?: string }) {
+  const parts = highlightMatches(tokens, query);
+  return parts.some((part) => part.text) ? parts.map((part, index) => part.hit
+    ? <mark className={`search-hit ${part.className ?? ""}`} key={index}>{part.text}</mark>
+    : <span className={part.className} key={index}>{part.text}</span>) : " ";
+}
 
 export function RepositoryTree({ reader, locale, onOpenSource }: { reader: Reader; locale: WorkspaceLocale; onOpenSource: (target: SourceTarget) => void }) {
   const en = locale === "en";
@@ -43,6 +51,7 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
   const source = reader.source;
   const start = source?.start_line ?? 1;
   const end = source?.end_line ?? 0;
+  const lines = useMemo(() => sourceLines(source?.content ?? "", source?.language, start), [source?.content, source?.language, start]);
   return <section className="reader-panel" aria-label={en ? "Code reading" : "代码阅读"}>
     <form className="search-toolbar" onSubmit={(event) => { event.preventDefault(); void reader.search(query, mode); }}>
       <div className="segmented" aria-label={en ? "Search mode" : "搜索方式"}>
@@ -60,11 +69,15 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
     {reader.searched ? <section className="search-results" aria-label={en ? "Search results" : "搜索结果"}>
       <div className="section-heading"><h2>{en ? "Results" : "结果"}</h2><span className="muted">{reader.results.length}{reader.truncated ? "+" : ""}</span></div>
       {reader.results.length === 0 ? <p className="empty-state">{en ? "No matches." : "没有匹配结果。"}</p> : null}
-      {reader.results.map((item, index) => <button className="search-result" key={`${item.path}:${item.start_line}:${index}`}
-        onClick={() => void reader.openSource({ path: item.path, line: item.start_line ?? 1 })}>
-        <span className="result-path">{item.path}<span className="muted">:{item.start_line}</span></span>
-        <code>{item.content}</code>
-      </button>)}
+      {reader.results.map((item, index) => {
+        const key = `${item.path}:${item.start_line}:${index}`;
+        const selected = reader.sourceTarget?.resultKey === key;
+        return <button className={`search-result ${selected ? "selected" : ""}`} key={key} aria-current={selected ? "true" : undefined}
+          onClick={() => void reader.openSource({ path: item.path, line: item.start_line ?? 1, resultKey: key, searchQuery: reader.resultQuery })}>
+          <span className="result-path">{item.path}<span className="muted">:{item.start_line}</span></span>
+          <code><HighlightedLine tokens={[{ text: item.content ?? "" }]} query={reader.resultQuery} /></code>
+        </button>;
+      })}
     </section> : null}
     <div className="source-header">
       <span className="source-path">{reader.sourceTarget?.path ?? (en ? "Source" : "源码")}</span>
@@ -84,8 +97,8 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
         onClick={() => reader.sourceTarget && void reader.openSource(reader.sourceTarget)}><RefreshCw size={16} /></button></div> : null}
     {reader.reading ? <p role="status" className="empty-state">{en ? "Reading file..." : "正在读取文件…"}</p> : null}
     {source ? <div className={`source-code ${wrapLines ? "wrap-lines" : ""}`} tabIndex={0} role="region" aria-label={en ? "File contents" : "文件内容"}>
-      <pre>{(source.content ?? "").split("\n").map((line, index) => <span className={`source-line ${start + index <= (reader.sourceTarget?.endLine ?? start) ? "target-line" : ""}`} key={start + index}>
-        <span className="line-number" aria-hidden="true">{start + index}</span><code>{line || " "}</code>
+      <pre>{lines.map((tokens, index) => <span className={`source-line ${!reader.sourceTarget?.resultKey && start + index <= (reader.sourceTarget?.endLine ?? start) ? "target-line" : ""}`} key={start + index}>
+        <span className="line-number" aria-hidden="true">{start + index}</span><code><HighlightedLine tokens={tokens} query={reader.sourceTarget?.searchQuery} /></code>
       </span>)}</pre>
     </div> : !reader.reading && !reader.sourceError ? <div className="reader-empty"><FileCode2 size={32} /><p>{en ? "No file selected" : "尚未选择文件"}</p></div> : null}
   </section>;

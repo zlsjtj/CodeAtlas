@@ -14,11 +14,13 @@ These locations explain how the function is stored and invoked. They do not cove
 
 ## Recording
 
-The [English recording](assets/codeatlas-reading-en.gif) uses the actual workspace on Windows and Chromium, at 960 by 640 pixels. It starts with Click indexed and the decorator source open, so installation and downloading are not included. The interface is switched to English before capture; labels are not painted onto an earlier recording.
+The [English recording](assets/codeatlas-reading-en.gif) uses the actual workspace on Windows and Chromium, at 960 by 640 pixels. The first frame keeps the `callback=f` query, selected result and highlighted decorator source visible; installation and downloading are not included. The interface is switched to English before capture; labels are not painted onto an earlier recording.
 
 The approximately 28-second sequence uses captured browser frames at original speed, without cuts or model responses. The recorder compares every displayed source line with the pinned checkout, checks the 200-line read limit, and records file hashes and line ranges in the [capture receipt](evidence/reading-demo-en.json). The [mobile still](assets/codeatlas-reading-en-mobile.png) shows the reader panel at a 390-pixel viewport with line wrapping enabled.
 
 Both language versions show the same Click source, covered by its [BSD-3-Clause notice](../THIRD_PARTY_NOTICES.md). Neither is an endorsement by Pallets.
+
+During capture, a 200-line read starting inside a docstring caused misleading colors on later code. Non-initial pages now highlight each line independently. Multiline colors can be incomplete in these fragments; colors do not establish syntax correctness. A regression test covers the truncated-docstring case, alongside the recorder's text comparisons.
 
 ## What This Does Not Validate
 

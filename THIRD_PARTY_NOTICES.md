@@ -7,6 +7,11 @@ The reader UI uses `lucide-react`. Its [ISC license and Feather-derived icon
 MIT notices](docs/licenses/lucide.txt) are included unchanged from the installed
 package.
 
+Source syntax colors use `lowlight` (MIT) and its `highlight.js` engine
+(BSD-3-Clause). Their notices are retained in
+[lowlight.txt](docs/licenses/lowlight.txt) and
+[highlight.js.txt](docs/licenses/highlight.js.txt).
+
 ## Click Demo
 
 The Chinese and English `docs/assets/codeatlas-reading*.gif` and `.png` recordings show source from

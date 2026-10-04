@@ -5,7 +5,7 @@ import { repositoryTool } from "@/lib/api";
 import type { RepositoryRecord, ToolResultItem } from "@/lib/types";
 import type { WorkspaceLocale } from "@/lib/workspace-i18n";
 
-export type SourceTarget = { path: string; line?: number; endLine?: number; fromCitation?: boolean };
+export type SourceTarget = { path: string; line?: number; endLine?: number; fromCitation?: boolean; resultKey?: string; searchQuery?: string };
 
 export function useRepositoryReader(repository: RepositoryRecord, locale: WorkspaceLocale) {
   const [tree, setTree] = useState<Record<string, ToolResultItem[]>>({});
@@ -13,6 +13,7 @@ export function useRepositoryReader(repository: RepositoryRecord, locale: Worksp
   const [treeError, setTreeError] = useState("");
   const [treeLoading, setTreeLoading] = useState(false);
   const [results, setResults] = useState<ToolResultItem[]>([]);
+  const [resultQuery, setResultQuery] = useState("");
   const [searched, setSearched] = useState(false);
   const [truncated, setTruncated] = useState(false);
   const [searchError, setSearchError] = useState("");
@@ -72,12 +73,15 @@ export function useRepositoryReader(repository: RepositoryRecord, locale: Worksp
     setSearchError("");
     setSearched(false);
     setResults([]);
+    setResultQuery("");
+    setSourceTarget((current) => current ? { ...current, resultKey: undefined, searchQuery: undefined } : null);
     try {
       const response = await repositoryTool(mode, {
         repo_id: repository.id, [mode === "search" ? "query" : "name"]: query.trim(), limit: 30,
       }, locale, signal);
       if (signal.aborted) return;
       setResults(response.items);
+      setResultQuery(query.trim());
       setTruncated(response.truncated);
       setSearched(true);
     } catch (error) {
@@ -106,6 +110,6 @@ export function useRepositoryReader(repository: RepositoryRecord, locale: Worksp
     }
   }
 
-  return { tree, expanded, treeError, treeLoading, loadTree, toggleDirectory, results, searched,
+  return { tree, expanded, treeError, treeLoading, loadTree, toggleDirectory, results, resultQuery, searched,
     truncated, searchError, searching, search, source, sourceTarget, sourceError, reading, openSource };
 }

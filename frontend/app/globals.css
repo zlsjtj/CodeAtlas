@@ -79,6 +79,8 @@ pre { overflow: auto; }
 .search-results .section-heading { padding: 2px 16px; }
 .search-result { display: block; width: 100%; border: 0; border-top: 1px solid #edf0f2; border-radius: 0; padding: 10px 16px; text-align: left; }
 .search-result:hover { background: #f2f6fc; }
+.search-result.selected { background: #edf6f3; box-shadow: inset 3px 0 var(--accent); }
+.search-result.selected .result-path { color: var(--accent); }
 .result-path { color: #235b91; display: block; overflow-wrap: anywhere; font-size: 12px; margin-bottom: 4px; }
 .search-result code { display: block; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .source-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 16px; border-bottom: 1px solid var(--line); min-height: 49px; background: #fbfcfd; }
@@ -92,6 +94,12 @@ pre { overflow: auto; }
 .wrap-lines pre { min-width: 0; }
 .wrap-lines .source-line code { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; flex: 1; }
 .source-line.target-line { background: #f2f7fe; }
+.source-code .hljs-comment, .source-code .hljs-quote { color: #65727b; }
+.source-code .hljs-keyword, .source-code .hljs-selector-tag, .source-code .hljs-meta { color: #9c304b; }
+.source-code .hljs-string, .source-code .hljs-regexp, .source-code .hljs-attribute { color: #176454; }
+.source-code .hljs-title, .source-code .hljs-section, .source-code .hljs-tag { color: #245aa5; }
+.source-code .hljs-number, .source-code .hljs-literal, .source-code .hljs-built_in, .source-code .hljs-attr { color: #855018; }
+.search-hit, .source-code .search-hit { color: #493900; background: #ffedaa; text-decoration: underline; text-decoration-color: #ad8619; text-underline-offset: 3px; }
 .line-number { color: #8b969e; width: 58px; padding-right: 16px; text-align: right; flex-shrink: 0; user-select: none; }
 .reader-empty, .workspace-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted); min-height: 300px; flex: 1; padding: 32px; }
 .reader-empty p { font-size: 13px; }

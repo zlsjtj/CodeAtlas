@@ -12,6 +12,9 @@ function fixture(name: string) {
   writeFileSync(path.join(root, ".env"), "TOKEN=must-not-appear");
   writeFileSync(path.join(root, ".gitignore"), "ignored.py\n");
   writeFileSync(path.join(root, "ignored.py"), "secret_marker = True\n");
+  if (name === "highlights") {
+    writeFileSync(path.join(root, "markup.tsx"), 'const markup = "<img src=x onerror=alert(1)> & text";\n\nexport const View = () => <p>{markup}</p>;\n');
+  }
   if (name === "patch") {
     mkdirSync(path.join(root, "tests"), { recursive: true });
     writeFileSync(path.join(root, "tests/test_main.py"), "def test_greeting():\n    from main import greet\n    assert greet('reader') == 'Welcome reader'\n");
@@ -74,6 +77,48 @@ test("no-key import, indexing, symbol lookup, source pages and existing views", 
   await expect(page.locator(".full-panel")).toContainText("草案");
   await page.getByRole("button", { name: "检查", exact: true }).click();
   await expect(page.locator(".full-panel")).toContainText("检查");
+});
+
+test("source highlighting preserves text and follows the selected result, not the input draft", async ({ page, request }) => {
+  const other = await request.post(`${api}/api/repositories`, { data: { source_type: "local", root_path: fixture("highlights-other"), name: "highlights-other" } });
+  const otherId = (await other.json()).id;
+  const root = await importAndIndex(page, "highlights");
+  const input = page.getByRole("textbox", { name: "搜索代码" });
+  const selected = page.locator('.search-result[aria-current="true"]');
+  await input.fill("GREET");
+  await input.press("Enter");
+  const result = page.locator(".search-result").first();
+  await expect(result.locator("mark")).toHaveText("greet");
+  await result.focus();
+  await page.keyboard.press("Enter");
+  await expect(selected).toHaveCount(1);
+  await expect(page.locator(".source-code mark")).toHaveText("greet");
+  await expect(page.locator(".source-code .hljs-keyword").first()).toHaveText("def");
+  const original = readFileSync(path.join(root, "main.py"), "utf8").split("\n").slice(0, 200);
+  expect(await page.locator(".source-line code").allTextContents()).toEqual(original);
+  await input.fill("Hello");
+  await expect(page.locator(".source-code mark")).toHaveText("greet");
+  await input.press("Enter");
+  await expect(selected).toHaveCount(0);
+  await expect(page.locator(".source-code mark")).toHaveCount(0);
+  await page.locator(".search-result").first().click();
+  await expect(page.locator(".source-code mark")).toHaveText("Hello");
+  await page.getByRole("button", { name: "下一段" }).click();
+  await expect(page.locator(".line-number").first()).toHaveText("201");
+  await expect(selected).toHaveCount(0);
+  await expect(page.locator(".source-code mark")).toHaveCount(0);
+  await page.locator(".search-result").first().click();
+  await expect(selected).toHaveCount(1);
+  await page.getByRole("button", { name: "markup.tsx", exact: true }).click();
+  await expect(page.locator(".source-path")).toHaveText("markup.tsx");
+  await expect(page.locator(".source-code code").first()).toContainText("<img src=x onerror=alert(1)>");
+  await expect(page.locator(".source-code img")).toHaveCount(0);
+  expect(await page.locator(".source-line code").allTextContents()).toEqual(readFileSync(path.join(root, "markup.tsx"), "utf8").trimEnd().split("\n").map((line) => line || " "));
+  await expect(selected).toHaveCount(0);
+  await page.getByLabel("当前仓库").selectOption(String(otherId));
+  await expect(page.locator(".reader-empty")).toBeVisible();
+  await expect(page.locator(".search-result")).toHaveCount(0);
+  await expect(input).toHaveValue("");
 });
 
 test("file errors stay visible and can be retried", async ({ page }) => {
