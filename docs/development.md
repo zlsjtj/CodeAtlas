@@ -84,6 +84,21 @@ Linux 首次安装浏览器依赖可能需要 `npx playwright install --with-dep
 
 ## 实录复现
 
+### 跨前后端阅读案例
+
+[CodeAtlas 搜索链路](codeatlas-search.md)使用独立的[固定版本清单](examples/codeatlas-search-case.json)，不改动六条模型问答案例。先启动 `npm run demo`，再运行：
+
+```sh
+node frontend/scripts/capture-search-case.mjs
+node frontend/scripts/capture-search-case.mjs --locale en
+```
+
+脚本准备 `repos/examples/codeatlas-<commit>`，通过界面导入并索引；已有干净且已索引的示例直接复用。依次搜索六处实现，保存标题、笔记和摘录，再从工作台下载 Markdown。浏览器上下文独立，不读取已有浏览器数据，不调用模型。
+
+脚本将显示的源码和保存的摘录与 checkout 逐行核对，检查文件哈希、提交链接、刷新恢复和重新打开。只有全部检查通过，才更新 `docs/examples/codeatlas-search-route*`、`docs/assets/codeatlas-search*` 与 `docs/evidence/codeatlas-search*`。每次的原始下载、截图和失败记录留在 `data/search-case-capture/<timestamp>`。自定义端口用 `DEMO_WEB_URL` 和 `DEMO_API_URL`。本案例不会安装或执行被阅读仓库的代码。
+
+### 首页演示
+
 首页现在使用约 14 秒的节选：先展示完成的路线，再回放搜索、添加标题与笔记、调整顺序和导出。部分片段为 2 倍速，页面已标注；同一次录制的 40 秒完整原速版也可以打开。先启动 `npm run demo`，然后执行：
 
 ```sh

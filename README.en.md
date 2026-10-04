@@ -49,6 +49,12 @@
 
 These are highlights from the notes. The export keeps the full selected excerpts, notes, and commit-pinned links, with timestamps and file hashes under “Source and version.” Read it directly on GitHub, or use the same workflow for your own repository.
 
+### Follow a Search Across the Stack
+
+**How does CodeAtlas's own search travel from React to FastAPI and back?** Follow request handling, index lookup, ranking, and rendering across five source files. Six reading stops, each with a source excerpt and a commit-pinned link.
+
+[Follow the walkthrough](docs/codeatlas-search.en.md) · [Read the exported notes](docs/examples/codeatlas-search-route.en.md)
+
 ## From Finding Code to Explaining It
 
 Start with a question when joining a project, investigating an implementation, or writing a source-code walkthrough.

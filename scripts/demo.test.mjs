@@ -44,6 +44,26 @@ test("an older clean example gets a missing origin without changing its checkout
   assert.equal(readFileSync(path.join(folder, "example.py"), "utf8"), content);
 });
 
+test("named examples use separate reusable checkouts", async (t) => {
+  const { parent, example } = fixture(t);
+  const click = await prepareExample(parent, example);
+  const named = { ...example, name: "CodeAtlas" };
+  const atlas = await prepareExample(parent, named);
+  assert.notEqual(click, atlas);
+  assert.equal(path.basename(atlas), `codeatlas-${example.commit}`);
+  assert.equal(await prepareExample(parent, named), atlas);
+  assert.equal(readFileSync(path.join(atlas, "example.py"), "utf8"), readFileSync(path.join(click, "example.py"), "utf8"));
+  assert.deepEqual(readdirSync(parent).sort(), [`click-${example.commit}`, `codeatlas-${example.commit}`]);
+});
+
+test("invalid example names are rejected before creating directories", async (t) => {
+  const { parent, example } = fixture(t);
+  for (const name of ["../outside", "a/b", "a\\b", "", ".", "a".repeat(65)]) {
+    await assert.rejects(prepareExample(parent, { ...example, name }), /Invalid example name/);
+    assert.equal(existsSync(parent), false);
+  }
+});
+
 test("example setup refuses to replace modified or untracked files", async (t) => {
   const { parent, example } = fixture(t);
   const folder = await prepareExample(parent, example);

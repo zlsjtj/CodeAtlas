@@ -1,0 +1,135 @@
+{
+  "recorded_at": "2026-10-04T17:05:50.419Z",
+  "platform": "win32",
+  "browser": "153.0.8010.12",
+  "locale": "zh-CN",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "mobile_viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "codeatlas": {
+    "base_commit": "0309bce354bd666586e52988ebaf9522f5ddb210",
+    "working_tree_dirty": true,
+    "source_sha256": {
+      "docs/examples/codeatlas-search-case.json": "eb534f31b4bcd446eebeb7ef818650c06da41eecbeda4c62e9cb6809d2257e21",
+      "frontend/scripts/capture-search-case.mjs": "86ad2da31c6ae05ce6ffd3f677fe809a106f723ac1eff06e2e0e79fb15cb86a9",
+      "scripts/demo.mjs": "653122adcd3f909fbf63d62db66f65440e7d5205ebcb19dfe530aad5e959b585",
+      "frontend/lib/reading-route.ts": "30250fa1137098d30a30f9996b3b836eec47d3086b4bf7b812648d230a22f753",
+      "frontend/lib/hooks/use-reading-route.ts": "fb335469b1393caa45f136c7c45d7aea8872b7465974ba768e0ad52787a14111",
+      "backend/app/services/source_provenance.py": "8cf064fec640418c98f273c598a0a2fa85434c6a423c383e30bcc8aa7da866d5"
+    }
+  },
+  "subject": {
+    "name": "CodeAtlas",
+    "url": "https://github.com/zlsjtj/CodeAtlas.git",
+    "commit": "0309bce354bd666586e52988ebaf9522f5ddb210"
+  },
+  "import_mode": "UI import and indexing",
+  "model_requests": 0,
+  "mocked_responses": false,
+  "excerpts_match_checkout": true,
+  "refresh_restores_stops": true,
+  "source_reopen_matches_hash": true,
+  "remote_link_availability_checked": false,
+  "evidence": [
+    {
+      "path": "frontend/lib/hooks/use-repository-reader.ts",
+      "start": 69,
+      "end": 86,
+      "query": "async function search(query:",
+      "title": "发起搜索",
+      "note": "提交表单后，阅读器清空上次结果，将仓库 ID、去掉首尾空白的关键词和数量上限交给 repositoryTool。begin 取消同一通道的前一次请求；响应回来后还要检查是否已经取消。",
+      "excerpt": "  async function search(query: string, mode: \"search\" | \"find-symbol\") {\n    if (!query.trim()) return;\n    const signal = begin(\"search\");\n    setSearching(true);\n    setSearchError(\"\");\n    setSearched(false);\n    setResults([]);\n    setResultQuery(\"\");\n    setSourceTarget((current) => current ? { ...current, resultKey: undefined, searchQuery: undefined } : null);\n    try {\n      const response = await repositoryTool(mode, {\n        repo_id: repository.id, [mode === \"search\" ? \"query\" : \"name\"]: query.trim(), limit: 30,\n      }, locale, signal);\n      if (signal.aborted) return;\n      setResults(response.items);\n      setResultQuery(query.trim());\n      setTruncated(response.truncated);\n      setSearched(true);",
+      "provenance": {
+        "content_sha256": "b5dd84d5cd31fab1786d0f14469945e4086526a8b4f7c6d7995720782536d1b3",
+        "state": "commit",
+        "revision": "0309bce354bd666586e52988ebaf9522f5ddb210",
+        "file_url": "https://github.com/zlsjtj/CodeAtlas/blob/0309bce354bd666586e52988ebaf9522f5ddb210/frontend/lib/hooks/use-repository-reader.ts"
+      }
+    },
+    {
+      "path": "frontend/lib/api.ts",
+      "start": 82,
+      "end": 91,
+      "query": "export function repositoryTool(",
+      "title": "发出 HTTP 请求",
+      "note": "关键词模式下 tool 为 search，载荷被序列化为 JSON，POST 到 /api/tools/search。共享 request 函数负责拼接后端地址、设置请求头和处理非成功响应。",
+      "excerpt": "export function repositoryTool(\n  tool: \"list-tree\" | \"search\" | \"read\" | \"find-symbol\",\n  payload: Record<string, unknown>,\n  locale: WorkspaceLocale,\n  signal?: AbortSignal,\n) {\n  return request<ToolExecutionResponse>(`/api/tools/${tool}`, {\n    method: \"POST\", body: JSON.stringify(payload), locale, signal,\n  });\n}",
+      "provenance": {
+        "content_sha256": "e2d02f7b4a3af4473931f4aef89922e82290d4f7692a704454039884f6ff8002",
+        "state": "commit",
+        "revision": "0309bce354bd666586e52988ebaf9522f5ddb210",
+        "file_url": "https://github.com/zlsjtj/CodeAtlas/blob/0309bce354bd666586e52988ebaf9522f5ddb210/frontend/lib/api.ts"
+      }
+    },
+    {
+      "path": "backend/app/api/routes/tools.py",
+      "start": 31,
+      "end": 40,
+      "query": "@router.post(\"/search\"",
+      "title": "接收搜索请求",
+      "note": "FastAPI 将 JSON 解析为 SearchRepoRequest，注入数据库会话和响应语言。路由把请求交给 RepositoryTools，后者调用 RepositoryQueryService.search_repo。",
+      "excerpt": "@router.post(\"/search\", response_model=ToolExecutionResponse)\ndef search_repo(\n    payload: SearchRepoRequest,\n    db: Session = Depends(get_db),\n    response_language: ResponseLanguage | None = Depends(get_response_language),\n) -> ToolExecutionResponse:\n    tools = RepositoryTools(db)\n    if payload.response_language is None:\n        payload.response_language = response_language\n    return tools.search_repo(payload)",
+      "provenance": {
+        "content_sha256": "1102cf0b5127b5fd3218208bc9197ecc89870d6960d72708c2618032c36165d9",
+        "state": "commit",
+        "revision": "0309bce354bd666586e52988ebaf9522f5ddb210",
+        "file_url": "https://github.com/zlsjtj/CodeAtlas/blob/0309bce354bd666586e52988ebaf9522f5ddb210/backend/app/api/routes/tools.py"
+      }
+    },
+    {
+      "path": "backend/app/services/retrieval_service.py",
+      "start": 104,
+      "end": 119,
+      "query": "statement = select(FileChunk)",
+      "title": "查询索引片段",
+      "note": "查询限定当前仓库，逐个加入关键词条件，再检查文件排除规则。候选来自已建立的 FileChunk 索引；本次搜索最多收集 min(limit × 8, 200) 个候选，不会重新扫描全部源码。",
+      "excerpt": "        statement = select(FileChunk).where(FileChunk.repo_id == payload.repo_id)\n        for term in query_terms:\n            statement = statement.where(func.lower(FileChunk.text).contains(term))\n\n        if payload.path_prefix:\n            statement = statement.where(FileChunk.path.startswith(payload.path_prefix.strip().strip(\"/\")))\n\n        fetch_limit = min(payload.limit * 8, 200)\n        root = self.repository_service.resolve_repository_root(repository, payload.response_language)\n        policy = RepositoryFilePolicy(root)\n        candidates = []\n        for chunk in self.db.scalars(statement).yield_per(200):\n            if policy.allows(root / chunk.path):\n                candidates.append(chunk)\n                if len(candidates) >= fetch_limit:\n                    break",
+      "provenance": {
+        "content_sha256": "e4cf48f2ceb009abedbc7c9f07b0643c0f1231523b630cd5178e109af15c520b",
+        "state": "commit",
+        "revision": "0309bce354bd666586e52988ebaf9522f5ddb210",
+        "file_url": "https://github.com/zlsjtj/CodeAtlas/blob/0309bce354bd666586e52988ebaf9522f5ddb210/backend/app/services/retrieval_service.py"
+      }
+    },
+    {
+      "path": "backend/app/services/retrieval_service.py",
+      "start": 121,
+      "end": 147,
+      "query": "ranked.sort",
+      "title": "排序并返回结果",
+      "note": "对已收集的候选评分，按分数、路径和起始行排序，再取 limit 条。每条结果带有路径、行范围、语言和摘要，前端据此显示列表并定位源码。",
+      "excerpt": "        ranked: list[tuple[float, FileChunk]] = []\n        for chunk in candidates:\n            score = self._score_chunk(chunk.text, chunk.path, normalized_query, query_terms)\n            if score > 0:\n                ranked.append((score, chunk))\n\n        ranked.sort(key=lambda entry: (-entry[0], entry[1].path, entry[1].start_line))\n        limited = ranked[: payload.limit]\n        items = [\n            ToolResultItem(\n                kind=\"search_match\",\n                path=chunk.path,\n                start_line=chunk.start_line,\n                end_line=chunk.end_line,\n                language=chunk.language,\n                content=self._build_snippet(chunk.text, normalized_query, query_terms),\n                score=round(score, 3),\n            )\n            for score, chunk in limited\n        ]\n\n        return ToolExecutionResponse(\n            tool_name=\"search_repo\",\n            repo_id=payload.repo_id,\n            items=items,\n            truncated=len(ranked) > len(limited),\n            total_matches=len(ranked),",
+      "provenance": {
+        "content_sha256": "e4cf48f2ceb009abedbc7c9f07b0643c0f1231523b630cd5178e109af15c520b",
+        "state": "commit",
+        "revision": "0309bce354bd666586e52988ebaf9522f5ddb210",
+        "file_url": "https://github.com/zlsjtj/CodeAtlas/blob/0309bce354bd666586e52988ebaf9522f5ddb210/backend/app/services/retrieval_service.py"
+      }
+    },
+    {
+      "path": "frontend/components/reader/repository-reader.tsx",
+      "start": 78,
+      "end": 86,
+      "query": "reader.results.map",
+      "title": "展示结果并打开源码",
+      "note": "界面逐条显示结果。点击时，路径和起始行交给 openSource，另发 /api/tools/read 请求读取当前工作区文件。因此结果摘要来自索引，打开的源码来自当前文件；文件改变后应重新索引。",
+      "excerpt": "      {reader.results.map((item, index) => {\n        const key = `${item.path}:${item.start_line}:${index}`;\n        const selected = reader.sourceTarget?.resultKey === key;\n        return <button className={`search-result ${selected ? \"selected\" : \"\"}`} key={key} aria-current={selected ? \"true\" : undefined}\n          onClick={() => void reader.openSource({ path: item.path, line: item.start_line ?? 1, resultKey: key, searchQuery: reader.resultQuery })}>\n          <span className=\"result-path\">{item.path}<span className=\"muted\">:{item.start_line}</span></span>\n          <code><HighlightedLine tokens={[{ text: item.content ?? \"\" }]} query={reader.resultQuery} /></code>\n        </button>;\n      })}",
+      "provenance": {
+        "content_sha256": "00923015cffc440455977d248a557d3d2f2262f12fe8ae92fd5bc12730af79d5",
+        "state": "commit",
+        "revision": "0309bce354bd666586e52988ebaf9522f5ddb210",
+        "file_url": "https://github.com/zlsjtj/CodeAtlas/blob/0309bce354bd666586e52988ebaf9522f5ddb210/frontend/components/reader/repository-reader.tsx"
+      }
+    }
+  ],
+  "artifact_sha256": {
+    "desktop.png": "86790f25d9e67003ed7499f3a6488b36660461914d610fa92ac8f0a01e11db9c",
+    "mobile.png": "f247e6ebc4aa3776273c81d2028872f68ff26bfc5e0098b343bdfa56af38c4c6",
+    "codeatlas-search-route.md": "708dbdb012e700f0dd4939a0a769e3b41203a1cbebf22f0010bc393d9887a8ce"
+  }
+}

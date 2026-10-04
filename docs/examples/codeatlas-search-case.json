@@ -1,0 +1,79 @@
+{
+  "repository": {
+    "name": "CodeAtlas",
+    "url": "https://github.com/zlsjtj/CodeAtlas.git",
+    "commit": "0309bce354bd666586e52988ebaf9522f5ddb210"
+  },
+  "title": {
+    "zh-CN": "CodeAtlas：一次搜索怎样穿过前后端",
+    "en": "CodeAtlas: following a search across the stack"
+  },
+  "stops": [
+    {
+      "query": "async function search(query:",
+      "path": "frontend/lib/hooks/use-repository-reader.ts",
+      "start": 69,
+      "end": 86,
+      "title": { "zh-CN": "发起搜索", "en": "Prepare the search" },
+      "note": {
+        "zh-CN": "提交表单后，阅读器清空上次结果，将仓库 ID、去掉首尾空白的关键词和数量上限交给 repositoryTool。begin 取消同一通道的前一次请求；响应回来后还要检查是否已经取消。",
+        "en": "After form submission, the reader clears old results and passes the repository ID, trimmed query, and limit to repositoryTool. begin aborts the previous request on this channel; the response is also checked for cancellation."
+      }
+    },
+    {
+      "query": "export function repositoryTool(",
+      "path": "frontend/lib/api.ts",
+      "start": 82,
+      "end": 91,
+      "title": { "zh-CN": "发出 HTTP 请求", "en": "Send the HTTP request" },
+      "note": {
+        "zh-CN": "关键词模式下 tool 为 search，载荷被序列化为 JSON，POST 到 /api/tools/search。共享 request 函数负责拼接后端地址、设置请求头和处理非成功响应。",
+        "en": "In text-search mode, tool is search. The payload becomes JSON in a POST to /api/tools/search. The shared request function adds the backend URL and headers, and handles unsuccessful responses."
+      }
+    },
+    {
+      "query": "@router.post(\"/search\"",
+      "path": "backend/app/api/routes/tools.py",
+      "start": 31,
+      "end": 40,
+      "title": { "zh-CN": "接收搜索请求", "en": "Receive the search request" },
+      "note": {
+        "zh-CN": "FastAPI 将 JSON 解析为 SearchRepoRequest，注入数据库会话和响应语言。路由把请求交给 RepositoryTools，后者调用 RepositoryQueryService.search_repo。",
+        "en": "FastAPI parses JSON into SearchRepoRequest and injects the database session and response language. The route delegates to RepositoryTools, which calls RepositoryQueryService.search_repo."
+      }
+    },
+    {
+      "query": "statement = select(FileChunk)",
+      "path": "backend/app/services/retrieval_service.py",
+      "start": 104,
+      "end": 119,
+      "title": { "zh-CN": "查询索引片段", "en": "Select indexed candidates" },
+      "note": {
+        "zh-CN": "查询限定当前仓库，逐个加入关键词条件，再检查文件排除规则。候选来自已建立的 FileChunk 索引；本次搜索最多收集 min(limit × 8, 200) 个候选，不会重新扫描全部源码。",
+        "en": "The query is scoped to this repository, adds a condition for each term, and checks file exclusions. Candidates come from indexed FileChunk rows; the search collects at most min(limit * 8, 200) candidates without rescanning all source files."
+      }
+    },
+    {
+      "query": "ranked.sort",
+      "path": "backend/app/services/retrieval_service.py",
+      "start": 121,
+      "end": 147,
+      "title": { "zh-CN": "排序并返回结果", "en": "Rank and shape the results" },
+      "note": {
+        "zh-CN": "对已收集的候选评分，按分数、路径和起始行排序，再取 limit 条。每条结果带有路径、行范围、语言和摘要，前端据此显示列表并定位源码。",
+        "en": "Collected candidates are scored and sorted by score, path, and starting line, then limited. Each result includes its path, line range, language, and snippet so the frontend can render the list and locate the source."
+      }
+    },
+    {
+      "query": "reader.results.map",
+      "path": "frontend/components/reader/repository-reader.tsx",
+      "start": 78,
+      "end": 86,
+      "title": { "zh-CN": "展示结果并打开源码", "en": "Render results and open source" },
+      "note": {
+        "zh-CN": "界面逐条显示结果。点击时，路径和起始行交给 openSource，另发 /api/tools/read 请求读取当前工作区文件。因此结果摘要来自索引，打开的源码来自当前文件；文件改变后应重新索引。",
+        "en": "The UI renders each result. Clicking passes the path and starting line to openSource, which sends a separate /api/tools/read request for the current workspace file. Snippets come from the index; opened source comes from the current file. Reindex after changes."
+      }
+    }
+  ]
+}

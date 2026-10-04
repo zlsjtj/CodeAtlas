@@ -18,9 +18,11 @@ async function git(directory, args, signal) {
 
 export async function prepareExample(parent, example = clickExample, signal) {
   if (!/^[a-f0-9]{40}$/.test(example.commit)) throw new Error("The example needs a full commit hash.");
+  const slug = (example.name ?? "Click").toLowerCase();
+  if (!/^[a-z][a-z0-9-]{0,63}$/.test(slug)) throw new Error("Invalid example name.");
   mkdirSync(parent, { recursive: true });
   const base = realpathSync(parent);
-  const target = path.join(base, `click-${example.commit}`);
+  const target = path.join(base, `${slug}-${example.commit}`);
   if (existsSync(target)) {
     if (realpathSync(target) !== target) throw new Error(`Example path is a link: ${target}`);
     if (await git(target, ["rev-parse", "HEAD"], signal) !== example.commit
@@ -34,7 +36,7 @@ export async function prepareExample(parent, example = clickExample, signal) {
   }
 
   // Publish only a complete checkout; never reset an existing example directory.
-  const staging = mkdtempSync(path.join(base, ".click-"));
+  const staging = mkdtempSync(path.join(base, `.${slug}-`));
   try {
     await git(staging, ["init"], signal);
     await git(staging, ["remote", "add", "origin", example.url], signal);
