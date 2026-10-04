@@ -347,7 +347,7 @@ const zhCN: LocaleCopy = {
     targetPaths: "目标文件路径",
     targetPathsPlaceholder:
       "一行一个路径，例如：\nbackend/app/services/chat_service.py\nfrontend/components/checks/checks-panel.tsx",
-    targetPathsHelp: "一行一个路径。单文件会走安全应用流程，多文件会先给出分组差异预览。",
+    targetPathsHelp: "一行一个路径。多文件草案会分别显示差异，应用前检查原文件哈希。",
     addSuggestedPath: "加入最近引用文件",
     instruction: "改动意图",
     defaultInstruction: "请围绕这些目标文件做最小必要改动，并返回清晰的差异预览。",
@@ -386,7 +386,7 @@ const zhCN: LocaleCopy = {
     noopCount: "无需改动",
     selectForBatch: "加入批量应用",
     noApplicableDiff: "没有可应用的差异",
-    singleFileSafeApply: "单文件安全应用",
+    singleFileSafeApply: "单文件应用",
     multiFilePreview: "多文件预览",
     fileCount: "文件数量",
     totalLatency: "总耗时",
@@ -448,7 +448,7 @@ const en: LocaleCopy = {
     eyebrow: "Repository workspace",
     title: "Code Repository Agent",
     subtitle:
-      "Import a repository, ask grounded questions, draft changes, and run safe verification in one workspace.",
+      "Read a repository, inspect references, review changes, and run checks.",
     backend: "Backend",
     readyRepos: "Ready repos",
     recentSessions: "Recent sessions",
@@ -571,7 +571,7 @@ const en: LocaleCopy = {
     targetPathsPlaceholder:
       "One path per line, for example:\nbackend/app/services/chat_service.py\nfrontend/components/checks/checks-panel.tsx",
     targetPathsHelp:
-      "Use one path per line. Single-file drafts keep the safe apply flow. Multi-file drafts start with a grouped diff preview.",
+      "Use one path per line. Multi-file drafts show separate diffs; applying verifies the original file hashes.",
     addSuggestedPath: "Add most recent cited file",
     instruction: "Change request",
     defaultInstruction: "Make the smallest necessary change across these files and return a clear diff preview.",
@@ -614,7 +614,7 @@ const en: LocaleCopy = {
     noopCount: "No-op",
     selectForBatch: "Include in batch apply",
     noApplicableDiff: "No applicable diff",
-    singleFileSafeApply: "Single-file safe apply",
+    singleFileSafeApply: "Single-file apply",
     multiFilePreview: "Multi-file preview",
     fileCount: "File count",
     totalLatency: "Total latency",

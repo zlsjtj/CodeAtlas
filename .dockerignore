@@ -15,4 +15,5 @@ frontend/playwright-report
 **/*-run.log
 data
 repos
-docs
+docs/*
+!docs/licenses/

@@ -46,6 +46,8 @@ test("no-key import, indexing, symbol lookup, source pages and existing views", 
   await expect(page.getByRole("region", { name: "文件内容" })).toContainText("def greet(name)");
   await page.getByRole("button", { name: "下一段" }).click();
   await expect(page.locator(".line-number").first()).toHaveText("201");
+  await expect(page.locator("header h1")).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
   await page.getByRole("button", { name: "上一段" }).click();
   await expect(page.locator(".line-number").first()).toHaveText("1");
   await page.getByRole("textbox", { name: "搜索代码" }).fill("no_such_symbol");
@@ -123,6 +125,9 @@ test("mobile reading, language switch and keyboard focus do not overflow", async
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.getByRole("button", { name: "Next lines" }).focus();
   await expect(page.getByRole("button", { name: "Next lines" })).toBeFocused();
+  await page.getByRole("button", { name: "Next lines" }).press("Enter");
+  await expect(page.locator(".line-number").first()).toHaveText("201");
+  await expect(page.locator("header h1")).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/mobile-reading.png", fullPage: true });
 });

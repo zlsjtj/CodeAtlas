@@ -1,0 +1,22 @@
+name: Problem / 问题反馈
+description: Startup, search, references or changes / 启动、检索、引用或改动问题
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps and expected result / 复现步骤与预期
+      description: Include a public repository URL and commit when relevant. / 相关时请附公开仓库和提交版本。
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result / 实际结果
+      description: Error text, screenshot or incorrect reference. Remove keys and private code. / 可附错误、截图或错误引用，请删除密钥与私有代码。
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment / 环境
+      placeholder: Windows 11, Node 20, Python 3.12; or Docker / 或 Docker

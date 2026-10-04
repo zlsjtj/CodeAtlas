@@ -10,6 +10,8 @@ RUN npm run build
 FROM node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
+COPY LICENSE THIRD_PARTY_NOTICES.md /app/licenses/
+COPY docs/licenses/lucide.txt /app/licenses/lucide.txt
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 USER node

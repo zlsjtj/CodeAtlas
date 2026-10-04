@@ -1,115 +1,70 @@
 # CodeAtlas
 
-带引用查看代码，预览改动，再运行检查。
+在浏览器里读一个陌生仓库：搜索函数，打开源码，再核对模型的解释。
 
 [![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml)
+[MIT](LICENSE) · 中文 | [English](README.en.md)
 
-中文 | [English](README.en.md)
+CodeAtlas 是本地运行的代码阅读工作台。目录、关键词搜索、符号定位和带行号源码都不需要模型 Key。配置模型后，可以提问并点击回答中的引用；需要改动时，仍然先看 diff，再明确应用。
 
-CodeAtlas 是一个在本地运行的代码仓库工作台。导入仓库后，可以围绕代码提问，核对回答中的文件路径、行号和工具调用记录；需要修改时，先查看 diff，再决定是否应用。
+## 看一次实际操作
 
-适合阅读一个不熟悉的仓库，或尝试单文件、少量文件的改动。当前面向本地单用户使用。
+![在 Click 中搜索 Command，打开定义并翻页核对源码](docs/assets/codeatlas-reading.gif)
 
-![CodeAtlas 检查面板：本地示例仓库的一次 pytest 通过结果](docs/assets/codeatlas-workspace.png)
+26 秒原速实录：在固定版本的 `pallets/click` 中搜索 `Command`，打开 `src/click/core.py`，查看相邻代码。无模拟响应，没有调用模型。当前没有配置模型 Key，真实问答尚未验收。[静态截图](docs/assets/codeatlas-reading.png) · [版本与核对记录](docs/reading-example.md)
 
-截图展示的是检查面板。问答、改动草案和检查验证在同一个工作台内切换。
+## 启动
 
-| 要做的事 | 可以查看的结果 |
-| --- | --- |
-| 找到功能入口 | 回答中的文件引用、代码摘录和工具调用摘要 |
-| 修改少量代码 | 完整文件草案、unified diff；应用前检查文件哈希是否变化 |
-| 验证改动 | 发现到的 pytest / npm 检查项、退出码和输出；使用“应用并检查”时，检查失败会恢复本次写入的目标文件 |
+### 原生运行
 
-## 本地启动
-
-需要 Python 3.11+、Node.js 20+ 和 Git。导入、索引、检索工具和检查功能不需要模型 Key；问答与生成改动草案需要 `OPENAI_API_KEY`，会产生模型 API 费用。
-
-### 1. 下载项目
+准备 Python 3.11+、Node.js 20.12+ 和 Git，在终端执行：
 
 ```sh
 git clone https://github.com/zlsjtj/CodeAtlas.git
 cd CodeAtlas
-```
-
-### 2. 启动后端
-
-从项目根目录执行。首次使用时复制 `.env.example`；已有 `.env` 时保留现有配置。要使用问答，在 `.env` 中填写 `OPENAI_API_KEY`，模型名由 `CODE_AGENT_OPENAI_MODEL` 配置。
-
-Windows PowerShell：
-
-```powershell
-Copy-Item .env.example .env
-cd backend
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --env-file ../.env --reload --port 8000
-```
-
-<details>
-<summary>macOS / Linux</summary>
-
-```sh
-cp .env.example .env
-cd backend
-python3 -m venv .venv
-.venv/bin/python -m pip install -e ".[dev]"
-.venv/bin/python -m uvicorn app.main:app --env-file ../.env --reload --port 8000
-```
-
-</details>
-
-`--env-file` 会把 `.env` 中的 Key 加载到后端进程。修改 Key 后重启后端。API 文档位于 [localhost:8000/docs](http://localhost:8000/docs)。
-
-### 3. 启动前端
-
-另开一个终端，从项目根目录执行：
-
-```sh
-cd frontend
-npm ci
+npm run setup
 npm run dev
 ```
 
-打开 [localhost:3000](http://localhost:3000)。前端默认连接 `http://localhost:8000`；如需修改，在 `frontend/.env.local` 设置 `NEXT_PUBLIC_API_BASE_URL` 后重启前端。
+Windows PowerShell 和 Ubuntu 使用相同命令。`setup` 创建 `backend/.venv`、安装项目依赖；没有 `.env` 时才从示例创建，不覆盖已有配置，也不安装系统软件。
 
-## 第一次试用
+打开终端打印的地址，默认是 [127.0.0.1:3000](http://127.0.0.1:3000)。端口占用时自动选择空闲端口，同时更新 API 地址和 CORS。`Ctrl+C` 关闭本次启动的前后端，不会清理其他项目的进程。
 
-可以先使用本项目的 `frontend` 目录，不需要准备另外一个仓库。
+第一次试用可导入启动输出中的 `frontend` 绝对路径，点击“开始索引”，然后在“符号”模式搜索 `WorkspaceShell`。点击结果就能阅读定义，不需要进入 API 文档。
 
-1. 在“导入仓库”中选择“本地仓库”，填写 `CodeAtlas/frontend` 的绝对路径，点击“登记仓库”。
-2. 点击“开始索引”，等状态变为“可用”。
-3. 没有 Key 时，可以在 API 文档中调用 `GET /api/repositories` 取得仓库 ID，再调用 `POST /api/tools/find-symbol`。把下面的 `repo_id` 替换为实际 ID：
+### Docker Compose
 
-```json
-{"repo_id": 1, "name": "WorkspaceShell"}
+已安装 Docker 和 Compose 时，在项目根目录运行：
+
+```sh
+docker compose up --build --wait
 ```
 
-应能找到 `components/workspace-shell.tsx` 中的定义，响应包含路径和行号。这里的路径相对于导入的 `frontend` 目录。
+打开 [127.0.0.1:3000](http://127.0.0.1:3000)。容器端口仅绑定本机；索引和克隆仓库保存在命名卷。停止用 `docker compose down`，不要加 `--volumes`，除非确实要删除数据。
 
-配置 Key 后，可以在“问答”中尝试：
+容器不能直接读取宿主机任意路径。可在界面导入公开 GitHub 仓库，或按[启动细节](docs/development.md)显式挂载一个本地源码目录。Docker 部署不是不可信代码执行沙箱。
 
-> WorkspaceShell 在哪里定义？它如何切换问答、改动草案和检查面板？请引用相关文件。
+### 可选：模型问答
 
-查看回答旁的“证据与轨迹”，核对引用与源码是否一致。
+在根目录 `.env` 中填写 `OPENAI_API_KEY`，并设置 `CODE_AGENT_OPENAI_MODEL`。兼容服务还可设置 `OPENAI_BASE_URL`。原生运行需重启；Docker 修改配置后重新执行上述 Compose 命令。
 
-## 使用边界
+Key 只交给后端，问答和草案会产生模型 API 费用，并发送相关代码给模型服务。“已配置”只说明配置存在，不保证服务可连接或模型可用。
 
-- 仓库和索引保存在本机，模型问答和草案生成会把相关代码发送给模型服务。文件访问遵循导入目录内的 `.gitignore`，默认排除 `.env`、常见私钥文件和符号链接；`.env.example` 等示例配置允许读取。这是按路径过滤，不会识别源码中的密钥，首次试用仍建议使用不含凭据的公开源码。
-- 检索基于关键词和按行切分的片段，符号定位使用正则匹配。跨文件问题可能漏掉证据，返回的引用需要人工核对。
-- 草案使用完整文件内容，适合小文件。回滚只恢复本次应用涉及的目标文件，不能撤销测试脚本的其他副作用。
-- 检查项来自有限的命令列表，但 npm scripts 和 pytest 仍会执行仓库代码；请只对信任的仓库运行检查。检查功能没有执行沙箱。
-- 尚未实现鉴权、多用户隔离和后台任务重启恢复，不适合直接部署为公共服务。
+## 一个阅读案例
 
-## 开发与验证
+问题是“Click 的 `Command` 在哪里定义？”在演示固定的提交中，符号搜索定位到 [`src/click/core.py:985`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L985)。点击结果后，工作台显示第 985–1184 行，可继续翻页查看实现。
 
-后端使用 FastAPI、SQLAlchemy、SQLite 和 OpenAI Agents SDK；前端使用 Next.js。API 类型由 FastAPI OpenAPI 生成。实现细节见[设计记录](docs/design-notes.md)。
+这是一次可复核的代码定位，不是模型答题成绩。回答中的摘录和当前工作区文件分开显示；能打开引用文件，不代表回答的推断正确。CodeAtlas 与 Click 各三道问题已固定在[案例清单](benchmarks/reading-cases.json)，[验收状态](docs/evidence/qa-status.json)保留为未运行，不用测试替身填充结果。
 
-在 `backend` 目录用虚拟环境中的 Python 执行 `python -m pytest`；在 `frontend` 目录执行 `npm run typecheck`。CI 运行这两项检查。
+## 边界与开发
 
-已有测试覆盖[文件排除与旧索引访问](backend/tests/test_file_access.py)、[检索工具](backend/tests/test_tools.py)、[过期草案拒绝与检查失败回滚](backend/tests/test_patches.py)等后端行为。模型生成在单元测试中使用替身，前端暂未加入端到端测试，这些检查不能代表真实模型回答质量。
+- 关键词和行级片段检索，符号匹配基于正则，不是 AST 或语义索引。跨文件问题可能漏证据。
+- 读取每次最多 200 行。目录、检索、读取和草案共用文件排除规则，包括 `.gitignore`、常见凭据路径和符号链接；这不是源码中的密钥检测。
+- 模型草案适合小文件。应用前校验文件哈希；“应用并检查”失败时只恢复本次写入的目标文件，不能撤销检查脚本的其他副作用。
+- pytest 和 npm scripts 会执行仓库代码，只应对信任的仓库运行检查。没有执行沙箱、鉴权或多用户隔离，不要直接暴露到公网。
 
-[引用冒烟脚本](benchmarks/README.md)会向运行中的后端发送三条问题，核对预期引用路径，需要 Key 和已索引的 **CodeAtlas 项目根目录**，与上面的 `frontend` 试用目录不同。它不评价回答是否正确，目前也没有公布跨仓库效果数据。
+后端是 FastAPI / SQLite，前端是 Next.js。CI 实际运行 Windows、Ubuntu 原生启动、后端测试、前端构建、Playwright 和 Linux Docker 冒烟测试。测试中的模型替身只验证交互，不证明模型回答质量。
 
-## 反馈
+[开发与测试命令](docs/development.md) · [设计取舍](docs/design-notes.md) · [换仓库时的迟到请求案例](docs/maintenance-reading.md)
 
-遇到问题可以[提交 Issue](https://github.com/zlsjtj/CodeAtlas/issues)。启动问题请附系统版本、执行命令和错误信息；定位失败请附符号名及最小代码片段；引用错误请说明提问内容、实际引用和预期文件。请移除 Key 和私有代码。
+遇到启动、定位或引用问题，可以[提交 Issue](https://github.com/zlsjtj/CodeAtlas/issues/new/choose)，附复现步骤和公开最小样例，删除 Key 和私有代码。项目采用 [MIT](LICENSE)；演示中的 Click 源码保留[第三方许可](THIRD_PARTY_NOTICES.md)。

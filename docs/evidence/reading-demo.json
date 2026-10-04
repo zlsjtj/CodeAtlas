@@ -1,0 +1,19 @@
+{
+  "recorded_at": "2026-10-04T08:12:29.736Z",
+  "repository": "pallets/click",
+  "commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+  "viewport": {"width": 1280, "height": 800},
+  "duration_ms": 26226,
+  "captured_frames": 104,
+  "model_calls": 0,
+  "mocked_responses": false,
+  "speed": "original",
+  "source_sha256_windows_checkout": "31e18146040f94fac5dc491affafde7004c7d06a4fa09a07a9ddaa86b555ef38",
+  "verification": {
+    "path": "src/click/core.py",
+    "start_line": 985,
+    "end_line": 1184,
+    "displayed_lines_match_checkout": true,
+    "scope": "UI source fidelity, not model answer correctness"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-04",
+  "case_manifest": "../../benchmarks/reading-cases.json",
+  "status": "not_accepted",
+  "reason": "No model key configured in the project environment or root .env.",
+  "real_question_requests": 0,
+  "maximum_question_requests": 6,
+  "model": null,
+  "results": [
+    {"id": "atlas-1", "status": "not_run", "raw_answer": null, "citations": null, "source_review": null},
+    {"id": "atlas-2", "status": "not_run", "raw_answer": null, "citations": null, "source_review": null},
+    {"id": "atlas-3", "status": "not_run", "raw_answer": null, "citations": null, "source_review": null},
+    {"id": "click-1", "status": "not_run", "raw_answer": null, "citations": null, "source_review": null},
+    {"id": "click-2", "status": "not_run", "raw_answer": null, "citations": null, "source_review": null},
+    {"id": "click-3", "status": "not_run", "raw_answer": null, "citations": null, "source_review": null}
+  ]
+}

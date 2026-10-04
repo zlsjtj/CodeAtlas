@@ -1,0 +1,26 @@
+{
+  "max_questions": 6,
+  "retry_failed_questions": false,
+  "repositories": [
+    {
+      "name": "CodeAtlas",
+      "url": "https://github.com/zlsjtj/CodeAtlas",
+      "commit": "8d785b8b8e929ea8bda16cb581dde9321670750e",
+      "questions": [
+        {"id": "atlas-1", "question": "仓库索引从 HTTP 请求到文件片段写入，分别经过哪些函数？请引用源码。"},
+        {"id": "atlas-2", "question": ".gitignore 如何同时影响搜索、直接读取和草案目标？旧索引会怎样处理？请引用源码。"},
+        {"id": "atlas-3", "question": "应用草案后检查失败时回滚哪些文件？不能回滚哪些副作用？请引用源码。"}
+      ]
+    },
+    {
+      "name": "Click",
+      "url": "https://github.com/pallets/click",
+      "commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+      "questions": [
+        {"id": "click-1", "question": "@click.command() 如何把 Python 函数转换为 Command？请引用源码。"},
+        {"id": "click-2", "question": "Context 对象如何创建，并在命令调用时传递？请引用源码。"},
+        {"id": "click-3", "question": "Option 的默认值如何确定，类型转换在哪里完成？请引用源码。"}
+      ]
+    }
+  ]
+}
