@@ -71,6 +71,8 @@ node frontend/scripts/record-reading.mjs
 python scripts/encode-recording.py
 ```
 
+英文界面用 `node frontend/scripts/record-reading.mjs --locale en` 录制，再运行同一编码命令。语言通过工作台自身的切换控件选择，不修改截图文字。英文素材和记录使用 `-en` 后缀，不覆盖中文版。
+
 编码脚本需要 Pillow，它只用于制作 GIF，不是应用运行依赖。浏览器在 `frontend` 下运行 `npx playwright install chromium` 安装。非默认端口用 `DEMO_WEB_URL` 和 `DEMO_API_URL`。每次录制的帧、时间戳与请求记录写入独立的 `data/recording/<timestamp>`；失败记录也保留。编码器使用最近一次成功录制。
 
 录屏从已索引、已打开装饰器源码的工作台开始，演示三次关键词搜索和源码核对，不包含安装或下载。GIF 为原速截图序列；手机静态图直接截取真实手机尺寸下的阅读栏，开启自动换行，没有拼接源码或模拟回答。

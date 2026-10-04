@@ -12,12 +12,12 @@ Browse files, search symbols, and read source in one workspace, without a model 
 **How does Click's `@command()` turn a function into an executable command?**
 
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-mobile.png">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-reading.png">
-  <img alt="Searching callback=f in Click, inspecting how the decorator stores the function, then finding the callback invocation" src="docs/assets/codeatlas-reading.gif">
+  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-en-mobile.png">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-reading-en.png">
+  <img alt="Searching callback=f in Click, inspecting how the decorator stores the function, then finding the callback invocation" src="docs/assets/codeatlas-reading-en.gif">
 </picture>
 
-Actual workspace recording at original speed, with no model calls. Phones show a single-column still. [Full animation](docs/assets/codeatlas-reading.gif) · [Case and recording details](docs/reading-example.md). Real-model Q&A has not yet been validated against the fixed cases.
+Actual workspace recording at original speed, with no model calls. Phones show a single-column still. [Full animation](docs/assets/codeatlas-reading-en.gif) · [Case and recording details](docs/reading-example.en.md). Real-model Q&A has not yet been validated against the fixed cases.
 
 In the pinned checkout:
 

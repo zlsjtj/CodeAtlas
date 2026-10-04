@@ -1,22 +1,40 @@
-# 0.1.0 阅读预览版说明草稿
+# 0.1.0 阅读预览版 / Reading Preview
 
-尚未创建 GitHub Release 或打标签。无 Key 阅读路径可试用，真实模型问答仍未验收。
+拟发布标签：`v0.1.0-preview.1`。本文是发布说明，是否已发布以 [GitHub Releases](https://github.com/zlsjtj/CodeAtlas/releases) 为准。
 
-## 本次变化
+## 可以试什么
 
-- 默认进入阅读视图：目录、关键词和符号搜索、带行号源码与翻页。
-- 引用可打开当前文件，回答摘录单独保留。切换仓库后忽略旧会话的迟到响应。
-- 根目录 `npm run setup` / `npm run dev`，以及仅绑定本机的 Docker Compose。
-- `npm run demo` 准备固定版本的 Click 并自动索引，使用独立数据库，保留已有配置和本地改动。
-- 问答栏可收起、源码可自动换行；首页用三处 callback 源码说明一个完整阅读问题，手机使用单栏静态图。
-- 中文、英文首页和 Click 实录；MIT 许可、第三方声明与问题反馈模板。
+这是一个不需要模型 Key 的代码阅读预览版。导入本地目录或公开 GitHub 仓库，搜索关键词或符号，再打开带行号的源码核对上下文。
+
+第一次试用建议跟着 Click 示例：安装 Python 3.11+、Node.js 20.12+ 和 Git，克隆仓库后运行：
+
+```sh
+npm run setup
+npm run demo
+```
+
+打开终端打印的地址，搜索 `callback=f`。固定版本的 Click 已导入并索引；沿[三处源码](reading-example.md)查看装饰器如何保存、调用原函数。示例不用已有模型 Key，也不覆盖 `.env` 或普通开发数据库。
+
+读自己的仓库用 `npm run dev`。另提供仅绑定本机的 Docker Compose；挂载和启动说明见 [README](../README.md)。中英文首页分别使用对应界面的实录，手机显示单栏静态图。
 
 ## 已验证与未验证
 
-启动与验证提交 `8d785b8` 的 [CI](https://github.com/zlsjtj/CodeAtlas/actions/runs/37187862001)中，Windows、Ubuntu 与 Linux Docker 均通过。Docker 测试实际构建、启动、读写持久化索引，并在容器重建后检查数据保留。Windows 本地后端测试为 62 通过、1 跳过；跳过项需要符号链接权限。
+阅读演示提交 `4010666` 的 [CI](https://github.com/zlsjtj/CodeAtlas/actions/runs/37192032213)已通过 Windows、Ubuntu 和 Linux Docker 验证，包含示例准备与重复导入、后端回归、前端类型检查及构建、浏览器测试，以及容器重建后的索引保留。发布时仍需确认标签指向的提交 CI 通过，不能用这条历史记录代替。
 
-浏览器测试中的模型是替身。没有模型 Key，本轮没有真实回答或引用质量结论；六道固定问题保留为 `not_run`。没有验证 macOS、公网部署、大规模仓库性能或不可信代码执行隔离。
+- 真实模型问答尚未验收，六道固定问题仍为 `not_run`。实录没有模型调用，浏览器测试中的模型替身不代表真实效果。
+- 搜索是关键词和正则符号匹配，不是语义搜索或调用图。单次最多读取 200 行。
+- 草案应用需要确认，并检查文件哈希；检查失败只回滚本次修改的目标文件。
+- pytest 和 npm scripts 会执行仓库代码。没有执行沙箱、鉴权或多用户隔离，只对可信仓库运行检查，不直接部署到公网。
+- macOS 和大规模仓库性能尚未验收。
 
-本预览版的范围是无需 Key 的代码阅读。发布前检查对应提交的原生启动、浏览器回归和 Docker CI。新增示例入口的 Windows / Ubuntu 实测由 CI 单独执行，不能以旧提交的结果替代。
+遇到启动或搜索问题，请在 [Issue](https://github.com/zlsjtj/CodeAtlas/issues/new/choose) 中附系统、版本、复现步骤和公开最小样例，不上传密钥或私有代码。
 
-宣布真实模型问答通过验收前，仍需执行预定义的六个问题，并人工核对每个引用及结论。失败照常记录，不能将选择性重试后的答案替换首轮结果。这项尚未完成，不属于本次阅读预览的通过项。
+## English
+
+This preview focuses on local code reading without a model key: import a repository, search text or symbols, and inspect numbered source lines.
+
+With Python 3.11+, Node.js 20.12+ and Git installed, clone the project, run `npm run setup`, then `npm run demo`. Open the printed URL and switch the workspace to English. The pinned Click checkout is already indexed; search `callback=f` and follow the [callback example](reading-example.en.md). Use `npm run dev` for your own repositories, or follow the [Docker instructions](../README.en.md#docker-compose).
+
+Real-model Q&A remains unvalidated. Search uses keywords and regexes, not semantic retrieval. Reads are capped at 200 lines. Checks execute repository code without a sandbox; use trusted repositories only and do not expose the service publicly. macOS and large-repository performance have not been validated.
+
+Please report startup failures or searches that cannot locate expected code, with reproducible steps and a minimal public example. Remove credentials and private source before sharing.

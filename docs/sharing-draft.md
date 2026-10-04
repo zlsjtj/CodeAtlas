@@ -20,7 +20,7 @@ Project: https://github.com/zlsjtj/CodeAtlas
 
 ## GitHub About 建议
 
-A local workspace for exploring codebases, searching symbols, and checking source references.
+Explore unfamiliar codebases locally. Search symbols and read source without a model key.
 
 Topics 可保留 `code-search`、`developer-tools`、`repository-analysis`、`nextjs`、`fastapi`。About 和 topics 不在 Git 文件中，这份草稿不表示远端设置已经修改。
 

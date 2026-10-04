@@ -2,8 +2,16 @@ import { chromium, expect } from "@playwright/test";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { parseArgs } from "node:util";
 import { clickExample, indexExample, prepareExample } from "../../scripts/demo.mjs";
 
+const { values } = parseArgs({ options: { locale: { type: "string", default: "zh-CN" } } });
+const locale = values.locale;
+if (!["zh-CN", "en"].includes(locale)) throw new Error("Supported locales: zh-CN, en");
+const labels = locale === "en"
+  ? { search: "Search code", repository: "Current repository", ready: "Ready", wrap: "Wrap lines" }
+  : { search: "搜索代码", repository: "当前仓库", ready: "可用", wrap: "自动换行" };
+const assetName = locale === "en" ? "codeatlas-reading-en" : "codeatlas-reading";
 const root = path.resolve(import.meta.dirname, "../..");
 const folder = await prepareExample(path.join(root, "repos/examples"));
 const recordingRoot = path.join(root, "data/recording");
@@ -27,10 +35,10 @@ page.on("request", (request) => {
 mkdirSync(output, { recursive: true });
 
 async function search(query) {
-  await page.getByRole("textbox", { name: "搜索代码" }).fill(query);
+  await page.getByRole("textbox", { name: labels.search }).fill(query);
   const response = page.waitForResponse((response) => response.url().endsWith("/api/tools/search")
     && response.request().method() === "POST");
-  await page.getByRole("textbox", { name: "搜索代码" }).press("Enter");
+  await page.getByRole("textbox", { name: labels.search }).press("Enter");
   return (await (await response).json()).items;
 }
 
@@ -61,14 +69,16 @@ async function focusLine(line) {
 
 try {
   await page.goto(web);
-  await page.getByLabel("当前仓库").selectOption(String(repo.id));
-  await expect(page.locator(".repository-status")).toHaveText("可用");
+  await page.getByLabel("语言", { exact: true }).selectOption(locale);
+  await expect(page.locator("html")).toHaveAttribute("lang", locale);
+  await page.getByLabel(labels.repository).selectOption(String(repo.id));
+  await expect(page.locator(".repository-status")).toHaveText(labels.ready);
   await page.getByRole("button", { name: "src", exact: true }).click();
   await page.getByRole("button", { name: "click", exact: true }).click();
   await inspect(await search("callback=f"), "src/click/decorators.py", 248, "callback=f");
-  await page.getByRole("button", { name: "自动换行" }).click();
+  await page.getByRole("button", { name: labels.wrap }).click();
   await focusLine(248);
-  await page.getByRole("textbox", { name: "搜索代码" }).clear();
+  await page.getByRole("textbox", { name: labels.search }).clear();
   await page.screenshot({ path: path.join(output, "poster.png") });
 
   const started = Date.now();
@@ -108,15 +118,15 @@ try {
   expect(modelCalls).toBe(0);
   const receipt = {
     recorded_at: new Date().toISOString(), repository: "pallets/click", commit: clickExample.commit,
-    viewport, mobile_viewport: mobileViewport, duration_ms: duration, model_calls: modelCalls,
+    locale, viewport, mobile_viewport: mobileViewport, duration_ms: duration, model_calls: modelCalls,
     mocked_responses: false, speed: "original", initial_state: "Click indexed; decorator source already open",
     verification, frames, network,
   };
   writeFileSync(path.join(output, "recording.json"), JSON.stringify(receipt, null, 2));
   writeFileSync(path.join(recordingRoot, "latest.json"), JSON.stringify({ directory: path.basename(output) }));
-  copyFileSync(path.join(output, "poster.png"), path.join(root, "docs/assets/codeatlas-reading.png"));
-  copyFileSync(path.join(output, "mobile.png"), path.join(root, "docs/assets/codeatlas-reading-mobile.png"));
-  console.log("Recorded " + frames.length + " real frames; three source locations verified, no model calls.");
+  copyFileSync(path.join(output, "poster.png"), path.join(root, `docs/assets/${assetName}.png`));
+  copyFileSync(path.join(output, "mobile.png"), path.join(root, `docs/assets/${assetName}-mobile.png`));
+  console.log(`Recorded ${frames.length} real frames (${locale}); three source locations verified, no model calls. ${output}`);
 } catch (error) {
   writeFileSync(path.join(output, "failure.json"), JSON.stringify({ error: String(error), verification, network }, null, 2));
   throw error;

@@ -21,6 +21,8 @@
 
 [桌面静态画面](assets/codeatlas-reading.png)、[手机阅读栏截图](assets/codeatlas-reading-mobile.png)与[机器可读记录](evidence/reading-demo.json)一并保留。手机图来自实际窄屏布局，不是缩小的桌面图；首页对手机和减少动态效果偏好使用静态图。Click 源码使用 BSD-3-Clause，见[许可说明](../THIRD_PARTY_NOTICES.md)。
 
+[英文案例](reading-example.en.md)沿用同一固定提交和三次搜索，在工作台切换到 English 后独立录制，素材及核对记录分别保留。
+
 ## 尚未验收的部分
 
 CodeAtlas 和 Click 各三道问题已在[清单](../benchmarks/reading-cases.json)中预定义并固定版本。本轮模型请求数为 **0**：项目自身的环境和 `.env` 未提供有效 Key，不能生成真实回答。

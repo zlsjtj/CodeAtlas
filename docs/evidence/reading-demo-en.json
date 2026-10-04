@@ -1,7 +1,8 @@
 {
-  "recorded_at": "2026-10-04T09:12:26.949Z",
+  "recorded_at": "2026-10-04T09:42:28.241Z",
   "repository": "pallets/click",
   "commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+  "locale": "en",
   "viewport": {
     "width": 960,
     "height": 640
@@ -10,7 +11,7 @@
     "width": 390,
     "height": 720
   },
-  "duration_ms": 28151,
+  "duration_ms": 28037,
   "model_calls": 0,
   "mocked_responses": false,
   "speed": "original",
@@ -54,5 +55,5 @@
     }
   ],
   "captured_frames": 127,
-  "gif_duration_ms": 28100
+  "gif_duration_ms": 28010
 }
