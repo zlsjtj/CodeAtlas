@@ -5,6 +5,7 @@ from sqlalchemy import delete, distinct, func, select
 from sqlalchemy.orm import Session
 
 from app.indexing.chunker import LineChunker
+from app.indexing.file_policy import RepositoryFilePolicy
 from app.indexing.scanner import RepositoryScanner
 from app.models.file_chunk import FileChunk
 from app.models.repository import Repository
@@ -16,7 +17,7 @@ from app.schemas.repository import (
     RepositoryTreeNode,
     RepositoryTreeResponse,
 )
-from app.services.repository_service import RepositoryValidationError
+from app.services.repository_service import RepositoryService, RepositoryValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +33,6 @@ class IndexingService:
         repository: Repository,
         response_language: ResponseLanguage | None = None,
     ) -> RepositoryIndexResponse:
-        from app.services.repository_service import RepositoryService
-
         root = RepositoryService(self.db).resolve_repository_root(repository, response_language)
         repository.status = "indexing"
         self.db.add(repository)
@@ -118,8 +117,15 @@ class IndexingService:
         if path:
             query = query.where(FileChunk.path == path)
 
-        query = query.order_by(FileChunk.path.asc(), FileChunk.chunk_index.asc()).limit(limit)
-        items = list(self.db.scalars(query).all())
+        root = RepositoryService(self.db).resolve_repository_root(repository)
+        policy = RepositoryFilePolicy(root)
+        query = query.order_by(FileChunk.path.asc(), FileChunk.chunk_index.asc())
+        items = []
+        for chunk in self.db.scalars(query).yield_per(200):
+            if policy.allows(root / chunk.path):
+                items.append(chunk)
+                if len(items) >= limit:
+                    break
         return FileChunkListResponse(items=items)
 
     def build_tree(
@@ -153,7 +159,16 @@ class IndexingService:
                 )
             )
 
-        nodes = self._build_tree_nodes(target, root=root, depth=depth)
+        policy = RepositoryFilePolicy(root)
+        if not policy.allows(root / relative_path):
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "请求的目录已被仓库文件排除规则禁止访问。",
+                    "The requested directory is excluded by repository file access rules.",
+                )
+            )
+        nodes = self._build_tree_nodes(target, root=root, depth=depth, policy=policy)
         return RepositoryTreeResponse(
             repo_id=repository.id,
             root_path=str(root),
@@ -168,14 +183,15 @@ class IndexingService:
         *,
         root: Path,
         depth: int,
+        policy: RepositoryFilePolicy,
     ) -> list[RepositoryTreeNode]:
         nodes: list[RepositoryTreeNode] = []
 
         for entry in sorted(directory.iterdir(), key=lambda candidate: (candidate.is_file(), candidate.name.lower())):
+            if not policy.allows(entry):
+                continue
             if entry.is_dir():
-                if self.scanner.should_ignore_directory(entry.name):
-                    continue
-                children = self._build_tree_nodes(entry, root=root, depth=depth - 1) if depth > 1 else []
+                children = self._build_tree_nodes(entry, root=root, depth=depth - 1, policy=policy) if depth > 1 else []
                 nodes.append(
                     RepositoryTreeNode(
                         name=entry.name,

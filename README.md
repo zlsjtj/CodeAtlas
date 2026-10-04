@@ -1,180 +1,115 @@
 # CodeAtlas
 
+带引用查看代码，预览改动，再运行检查。
+
 [![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml)
 
-CodeAtlas 是一个面向代码仓库的问答和改动辅助工具。它的目标不大：导入一个仓库后，先做基础索引，再让模型通过受控工具去找文件、读代码、给出带引用的回答；如果需要修改代码，可以先生成草案和 diff，确认后再写入工作区并运行检查。
+中文 | [English](README.en.md)
 
-当前版本主要面向本地单用户使用，先验证仓库导入、检索问答、改动预览和检查回滚这条主流程。
+CodeAtlas 是一个在本地运行的代码仓库工作台。导入仓库后，可以围绕代码提问，核对回答中的文件路径、行号和工具调用记录；需要修改时，先查看 diff，再决定是否应用。
 
-## 界面预览
+适合阅读一个不熟悉的仓库，或尝试单文件、少量文件的改动。当前面向本地单用户使用。
 
-下面这张截图来自一个本地示例仓库完成索引后的检查面板，主要展示仓库上下文、自动发现的白名单检查项和最近一次通过结果。
+![CodeAtlas 检查面板：本地示例仓库的一次 pytest 通过结果](docs/assets/codeatlas-workspace.png)
 
-![CodeAtlas 工作台界面预览](docs/assets/codeatlas-workspace.png)
+截图展示的是检查面板。问答、改动草案和检查验证在同一个工作台内切换。
 
-## 目前能做什么
+| 要做的事 | 可以查看的结果 |
+| --- | --- |
+| 找到功能入口 | 回答中的文件引用、代码摘录和工具调用摘要 |
+| 修改少量代码 | 完整文件草案、unified diff；应用前检查文件哈希是否变化 |
+| 验证改动 | 发现到的 pytest / npm 检查项、退出码和输出；使用“应用并检查”时，检查失败会恢复本次写入的目标文件 |
 
-- 导入本地仓库，或从 GitHub clone 一个仓库到受管目录。
-- 扫描仓库文件，过滤常见构建产物和二进制文件，把文本文件按行切成 chunk 后写入 SQLite。
-- 提供 `list_repo_tree`、`search_repo`、`read_file`、`find_symbol` 四个仓库检索工具。
-- 问答时要求模型先调用工具，再基于工具结果回答，并返回引用和工具调用摘要。
-- 对单文件或少量文件生成 patch 草案，展示 unified diff。
-- 应用 patch 前校验文件内容哈希，避免覆盖草案生成之后发生变化的文件。
-- 根据仓库结构发现一小部分安全检查命令，例如 `pytest`、`npm run typecheck`、`npm run lint`、`npm run test`。
-- 支持“应用改动并运行检查”，检查失败时把本次写入的文件恢复回去。
+## 本地启动
 
-## 暂时没有解决的问题
+需要 Python 3.11+、Node.js 20+ 和 Git。导入、索引、检索工具和检查功能不需要模型 Key；问答与生成改动草案需要 `OPENAI_API_KEY`，会产生模型 API 费用。
 
-- 检索还是关键词和行级 chunk，没有接 embedding、rerank 或 AST 级索引。
-- 没有做权限、多用户隔离和完整审计，只适合本地或受信环境使用。
-- 后台任务还是轻量实现，没有引入 Celery、Redis 这类任务系统。
-- Patch 草案依赖模型输出完整文件内容，文件较大时不适合使用。
-- benchmark 目前只检查少量手写问题的引用路径，还不能衡量回答内容和稳定性。
-- 前端偏工作台原型，交互能覆盖主流程，但还没有做成成熟 IDE 插件体验。
+### 1. 下载项目
 
-## 技术栈
-
-- Backend: `FastAPI`
-- Frontend: `Next.js`
-- Model runtime: `OpenAI Agents SDK`
-- Storage: `SQLite`
-- ORM: `SQLAlchemy`
-- API 类型同步: `FastAPI OpenAPI -> openapi-typescript`
-
-## 主流程
-
-```text
-Next.js workspace
-  |
-  | HTTP API
-  v
-FastAPI backend
-  |
-  +-- repository import
-  +-- file scan and chunk index
-  +-- model tools: tree / search / read / symbol
-  +-- patch draft / apply
-  +-- checks discovery / run
-  |
-  v
-SQLite + managed repository workspace
+```sh
+git clone https://github.com/zlsjtj/CodeAtlas.git
+cd CodeAtlas
 ```
 
-一次典型使用流程：
+### 2. 启动后端
 
-1. 导入本地仓库或 GitHub 仓库。
-2. 触发索引。
-3. 在工作台里提问。
-4. 查看回答、引用和工具调用摘要。
-5. 需要修改时生成 patch 草案。
-6. 预览 diff，确认后应用。
-7. 运行推荐检查，失败时回滚本次写入。
+从项目根目录执行。首次使用时复制 `.env.example`；已有 `.env` 时保留现有配置。要使用问答，在 `.env` 中填写 `OPENAI_API_KEY`，模型名由 `CODE_AGENT_OPENAI_MODEL` 配置。
 
-## 目录结构
-
-```text
-.
-├─ backend/
-│  ├─ app/
-│  │  ├─ api/          # FastAPI 路由
-│  │  ├─ agents/       # Agents SDK 相关定义
-│  │  ├─ checks/       # 检查项发现和推荐
-│  │  ├─ core/         # 配置、数据库
-│  │  ├─ indexing/     # 文件扫描和 chunk 切分
-│  │  ├─ models/       # SQLAlchemy 模型
-│  │  ├─ schemas/      # Pydantic 请求/响应模型
-│  │  ├─ services/     # 主要业务逻辑
-│  │  └─ tools/        # 给模型调用的仓库工具
-│  ├─ tests/
-│  └─ pyproject.toml
-├─ frontend/
-│  ├─ app/
-│  ├─ components/
-│  └─ lib/
-├─ benchmarks/
-├─ docs/
-├─ data/               # 本地运行时数据，默认不提交
-└─ repos/              # clone 下来的仓库，默认不提交
-```
-
-## 快速启动
-
-环境要求：
-
-- Python 3.11+
-- Node.js 20+
-- Git
-- OpenAI API Key
-
-配置环境变量：
+Windows PowerShell：
 
 ```powershell
 Copy-Item .env.example .env
-```
-
-至少需要设置：
-
-```text
-OPENAI_API_KEY=...
-```
-
-启动后端：
-
-```powershell
 cd backend
 python -m venv .venv
-.venv\Scripts\activate
-python -m pip install -e .[dev]
-uvicorn app.main:app --reload --port 8000
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --env-file ../.env --reload --port 8000
 ```
 
-启动前端：
+<details>
+<summary>macOS / Linux</summary>
 
-```powershell
+```sh
+cp .env.example .env
+cd backend
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[dev]"
+.venv/bin/python -m uvicorn app.main:app --env-file ../.env --reload --port 8000
+```
+
+</details>
+
+`--env-file` 会把 `.env` 中的 Key 加载到后端进程。修改 Key 后重启后端。API 文档位于 [localhost:8000/docs](http://localhost:8000/docs)。
+
+### 3. 启动前端
+
+另开一个终端，从项目根目录执行：
+
+```sh
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-访问：
+打开 [localhost:3000](http://localhost:3000)。前端默认连接 `http://localhost:8000`；如需修改，在 `frontend/.env.local` 设置 `NEXT_PUBLIC_API_BASE_URL` 后重启前端。
 
-- Frontend: http://localhost:3000
-- Backend docs: http://localhost:8000/docs
-- Health check: http://localhost:8000/api/health
+## 第一次试用
 
-## 实现取舍
+可以先使用本项目的 `frontend` 目录，不需要准备另外一个仓库。
 
-这个项目里有几处是刻意做得比较简单的：
+1. 在“导入仓库”中选择“本地仓库”，填写 `CodeAtlas/frontend` 的绝对路径，点击“登记仓库”。
+2. 点击“开始索引”，等状态变为“可用”。
+3. 没有 Key 时，可以在 API 文档中调用 `GET /api/repositories` 取得仓库 ID，再调用 `POST /api/tools/find-symbol`。把下面的 `repo_id` 替换为实际 ID：
 
-- 索引层先用文件扫描和行级 chunk。这样可以先验证“导入 -> 检索 -> 引用回答”的链路，后面再替换成向量检索或 AST 索引。
-- 仓库统一抽象成 `root_path`。本地目录和 GitHub clone 后续都走同一套索引、问答、patch 和 checks 逻辑。
-- 模型只能通过工具读仓库，不直接把整个仓库塞进 prompt。这样更容易知道它读过哪些证据。
-- Patch 先做草案和 diff，再应用。应用前用 sha256 校验基线内容，避免覆盖用户在草案生成后做出的修改。
-- Checks 只运行发现到的白名单命令，不开放任意命令执行。
-
-更详细的设计记录见 [docs/design-notes.md](docs/design-notes.md)。
-
-## 测试
-
-仓库里配置了 GitHub Actions，会在 push 和 pull request 时运行后端测试和前端类型检查。
-
-后端测试主要覆盖仓库导入、索引、检索工具、问答接口、patch 应用、批量应用、checks 和失败回滚：
-
-```powershell
-cd backend
-python -m pytest
+```json
+{"repo_id": 1, "name": "WorkspaceShell"}
 ```
 
-前端目前主要依赖 TypeScript 检查：
+应能找到 `components/workspace-shell.tsx` 中的定义，响应包含路径和行号。这里的路径相对于导入的 `frontend` 目录。
 
-```powershell
-cd frontend
-npm run typecheck
-```
+配置 Key 后，可以在“问答”中尝试：
 
-## 短期 TODO
+> WorkspaceShell 在哪里定义？它如何切换问答、改动草案和检查面板？请引用相关文件。
 
-- 给 benchmark 补充真实失败 case，目前只有针对本仓库的 3 条问题。
-- 给前端补一两个端到端冒烟测试，例如导入仓库、触发索引、打开问答面板。
-- 补充 `find_symbol` 对 TypeScript type、enum 和类方法声明的识别。
-- 后台任务现在只是轻量实现，如果要长期运行，需要补失败重试、任务取消和更清楚的错误状态。
+查看回答旁的“证据与轨迹”，核对引用与源码是否一致。
+
+## 使用边界
+
+- 仓库和索引保存在本机，模型问答和草案生成会把相关代码发送给模型服务。文件访问遵循导入目录内的 `.gitignore`，默认排除 `.env`、常见私钥文件和符号链接；`.env.example` 等示例配置允许读取。这是按路径过滤，不会识别源码中的密钥，首次试用仍建议使用不含凭据的公开源码。
+- 检索基于关键词和按行切分的片段，符号定位使用正则匹配。跨文件问题可能漏掉证据，返回的引用需要人工核对。
+- 草案使用完整文件内容，适合小文件。回滚只恢复本次应用涉及的目标文件，不能撤销测试脚本的其他副作用。
+- 检查项来自有限的命令列表，但 npm scripts 和 pytest 仍会执行仓库代码；请只对信任的仓库运行检查。检查功能没有执行沙箱。
+- 尚未实现鉴权、多用户隔离和后台任务重启恢复，不适合直接部署为公共服务。
+
+## 开发与验证
+
+后端使用 FastAPI、SQLAlchemy、SQLite 和 OpenAI Agents SDK；前端使用 Next.js。API 类型由 FastAPI OpenAPI 生成。实现细节见[设计记录](docs/design-notes.md)。
+
+在 `backend` 目录用虚拟环境中的 Python 执行 `python -m pytest`；在 `frontend` 目录执行 `npm run typecheck`。CI 运行这两项检查。
+
+已有测试覆盖[文件排除与旧索引访问](backend/tests/test_file_access.py)、[检索工具](backend/tests/test_tools.py)、[过期草案拒绝与检查失败回滚](backend/tests/test_patches.py)等后端行为。模型生成在单元测试中使用替身，前端暂未加入端到端测试，这些检查不能代表真实模型回答质量。
+
+[引用冒烟脚本](benchmarks/README.md)会向运行中的后端发送三条问题，核对预期引用路径，需要 Key 和已索引的 **CodeAtlas 项目根目录**，与上面的 `frontend` 试用目录不同。它不评价回答是否正确，目前也没有公布跨仓库效果数据。
+
+## 反馈
+
+遇到问题可以[提交 Issue](https://github.com/zlsjtj/CodeAtlas/issues)。启动问题请附系统版本、执行命令和错误信息；定位失败请附符号名及最小代码片段；引用错误请说明提问内容、实际引用和预期文件。请移除 Key 和私有代码。

@@ -5,25 +5,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-IGNORED_DIRECTORY_NAMES = {
-    ".git",
-    ".hg",
-    ".svn",
-    ".next",
-    ".turbo",
-    ".venv",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".ruff_cache",
-    "__pycache__",
-    "build",
-    "coverage",
-    "dist",
-    "node_modules",
-    "out",
-    "target",
-    "venv",
-}
+from app.indexing.file_policy import RepositoryFilePolicy
+
 MAX_FILE_BYTES = 512 * 1024
 
 LANGUAGE_BY_SUFFIX = {
@@ -87,9 +70,6 @@ class ScanResult:
 
 
 class RepositoryScanner:
-    def should_ignore_directory(self, name: str) -> bool:
-        return name in IGNORED_DIRECTORY_NAMES
-
     def should_skip_file(self, path: Path) -> bool:
         try:
             if not path.is_file():
@@ -101,6 +81,8 @@ class RepositoryScanner:
         return self._is_binary(path)
 
     def scan(self, root: Path) -> ScanResult:
+        root = root.resolve()
+        policy = RepositoryFilePolicy(root)
         files: list[ScannedFile] = []
         language_counts: Counter[str] = Counter()
         skipped_file_count = 0
@@ -109,12 +91,12 @@ class RepositoryScanner:
             dir_names[:] = sorted(
                 directory_name
                 for directory_name in dir_names
-                if not self.should_ignore_directory(directory_name)
+                if policy.allows(Path(current_root) / directory_name)
             )
 
             for file_name in sorted(file_names):
                 candidate = Path(current_root) / file_name
-                if self.should_skip_file(candidate):
+                if not policy.allows(candidate) or self.should_skip_file(candidate):
                     skipped_file_count += 1
                     continue
 

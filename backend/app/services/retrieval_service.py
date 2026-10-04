@@ -6,6 +6,7 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.indexing.file_policy import RepositoryFilePolicy
 from app.models.file_chunk import FileChunk
 from app.schemas.common import ResponseLanguage
 from app.schemas.tool import (
@@ -107,7 +108,14 @@ class RepositoryQueryService:
             statement = statement.where(FileChunk.path.startswith(payload.path_prefix.strip().strip("/")))
 
         fetch_limit = min(payload.limit * 8, 200)
-        candidates = list(self.db.scalars(statement.limit(fetch_limit)).all())
+        root = self.repository_service.resolve_repository_root(repository, payload.response_language)
+        policy = RepositoryFilePolicy(root)
+        candidates = []
+        for chunk in self.db.scalars(statement).yield_per(200):
+            if policy.allows(root / chunk.path):
+                candidates.append(chunk)
+                if len(candidates) >= fetch_limit:
+                    break
 
         ranked: list[tuple[float, FileChunk]] = []
         for chunk in candidates:
@@ -229,11 +237,14 @@ class RepositoryQueryService:
         path_hint = payload.path_hint.strip().lower() if payload.path_hint else None
         items: list[ToolResultItem] = []
 
+        policy = RepositoryFilePolicy(root)
         for relative_path in indexed_paths:
             if path_hint and path_hint not in relative_path.lower():
                 continue
 
-            absolute_path = (root / relative_path).resolve()
+            absolute_path = root / relative_path
+            if not policy.allows(absolute_path):
+                continue
             if not absolute_path.exists() or not absolute_path.is_file():
                 continue
 
@@ -243,7 +254,7 @@ class RepositoryQueryService:
 
             try:
                 lines = absolute_path.read_text(encoding="utf-8").splitlines()
-            except UnicodeDecodeError:
+            except (OSError, UnicodeDecodeError):
                 continue
 
             for index, line in enumerate(lines, start=1):

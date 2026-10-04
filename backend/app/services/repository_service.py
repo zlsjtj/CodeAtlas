@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.indexing.file_policy import RepositoryFilePolicy
 from app.models.repository import Repository
 from app.schemas.common import ResponseLanguage
 from app.schemas.repository import RepositoryCreate
@@ -106,6 +107,14 @@ class RepositoryService:
                     response_language,
                     "请求的仓库路径不存在。",
                     "The requested repository path does not exist.",
+                )
+            )
+        if not RepositoryFilePolicy(root).allows(root / normalized):
+            raise RepositoryValidationError(
+                self._localized_message(
+                    response_language,
+                    "请求的路径已被仓库文件排除规则禁止访问。",
+                    "The requested path is excluded by repository file access rules.",
                 )
             )
         return target
