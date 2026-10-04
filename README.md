@@ -106,6 +106,8 @@ docker compose up --build --wait
 
 [启动、端口与数据目录](docs/development.md) · [版本记录](https://github.com/zlsjtj/CodeAtlas/releases)
 
+试过之后，[说说你想读懂什么、实际做到哪一步](https://github.com/zlsjtj/CodeAtlas/issues/new?template=trial-feedback.yml)。只看了案例或没跑通，也可以反馈。
+
 ## 需要时，接上模型一起读
 
 在同一工作台中提问，查看回答引用与工具调用记录，再回到源码核对。需要改动时，先查看草案和 diff，确认后应用，并运行仓库检查。

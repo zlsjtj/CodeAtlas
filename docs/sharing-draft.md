@@ -12,7 +12,7 @@
 
 [项目与短演示](https://github.com/zlsjtj/CodeAtlas) · [Click 笔记](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.4/docs/examples/click-showcase-route.md) · [CodeAtlas 笔记](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.4/docs/examples/codeatlas-search-route.md) · [试用版本](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.4)
 
-欢迎带着一个想读懂的仓库来试，也欢迎分享你整理的阅读路线。
+欢迎带着一个想读懂的仓库来试。[告诉我你想读懂什么、实际做到哪一步](https://github.com/zlsjtj/CodeAtlas/issues/new?template=trial-feedback.yml)，没跑通也可以反馈。分享路线前请检查并移除私有源码和凭据。
 
 ## English Introduction
 
@@ -26,7 +26,7 @@ Search, annotation, reordering, and export run locally without a model key. Afte
 
 [Project and short demo](https://github.com/zlsjtj/CodeAtlas/blob/master/README.en.md) · [Click notes](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.4/docs/examples/click-showcase-route.en.md) · [CodeAtlas notes](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.4/docs/examples/codeatlas-search-route.en.md) · [Try this release](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.4)
 
-Try it with a repository you want to understand, and share the route you discover.
+Try it with a repository you want to understand, then [tell me what you tried and how far you got](https://github.com/zlsjtj/CodeAtlas/issues/new?template=trial-feedback.yml), even if you got stuck. Review any route before sharing it and remove private source or credentials.
 
 ## 配图与演示
 

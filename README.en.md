@@ -106,6 +106,8 @@ Local source requires an [explicit mount](docs/development.md#docker-挂载与�
 
 [Setup, ports, and data directories](docs/development.md) · [Releases](https://github.com/zlsjtj/CodeAtlas/releases)
 
+After trying it, [tell us what you wanted to understand and how far you got](https://github.com/zlsjtj/CodeAtlas/issues/new?template=trial-feedback.yml). Reading the examples or an unfinished attempt counts too.
+
 ## Add a Model When You Need One
 
 Ask questions in the same workspace, inspect citations and tool-call records, then open the source to check the answer. For changes, review the draft and diff before confirming an apply and running repository checks.

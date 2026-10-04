@@ -1,6 +1,11 @@
 name: Problem / 问题反馈
 description: Startup, search, references or changes / 启动、检索、引用或改动问题
 body:
+  - type: markdown
+    attributes:
+      value: |
+        这是公开 Issue。请勿上传 .env、密钥、私有源码或完整日志；只附复现所需且已检查过的片段。
+        This issue is public. Do not upload .env files, keys, private source, or full logs. Share only reviewed excerpts needed to reproduce the problem.
   - type: textarea
     id: steps
     attributes:
@@ -16,7 +21,12 @@ body:
     validations:
       required: true
   - type: input
+    id: version
+    attributes:
+      label: CodeAtlas version / 项目版本
+      description: Release tag or git rev-parse --short HEAD from your CodeAtlas checkout. / 填发布标签，或在 CodeAtlas 目录运行 git rev-parse --short HEAD。
+  - type: input
     id: environment
     attributes:
       label: Environment / 环境
-      placeholder: Windows 11, Node 20, Python 3.12; or Docker / 或 Docker
+      placeholder: Windows 11, Chrome, Node 20, Python 3.12, npm run demo; or Docker / 或 Docker

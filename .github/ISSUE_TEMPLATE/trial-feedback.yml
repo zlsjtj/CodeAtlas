@@ -1,0 +1,49 @@
+name: Trial feedback / 试用反馈
+description: Tell us what you tried and how far you got / 说说你想读懂什么、实际做到哪一步
+body:
+  - type: markdown
+    attributes:
+      value: |
+        没有跑通、只看了示例，也可以反馈；用中文或英文写几句话即可。
+        This is also for unfinished attempts or just reading the examples. A few sentences in either language are enough.
+
+        **这是公开 Issue。请勿上传 .env、密钥、私有源码或完整日志；截图和导出笔记也请先检查。**
+        **This issue is public. Do not upload .env files, keys, private source, or full logs. Review screenshots and exports before sharing.**
+  - type: textarea
+    id: question
+    attributes:
+      label: What did you want to understand? / 你想读懂什么？
+      description: A concrete question is enough. A public repository link is optional. / 写一个具体问题即可，公开仓库链接可选。
+      placeholder: How does Click's @command() call my function? / Click 的 @command() 是怎么调用我的函数的？
+    validations:
+      required: true
+  - type: dropdown
+    id: progress
+    attributes:
+      label: How far did you get? / 实际做到哪一步？
+      description: Choose the furthest step you reached, even if you got stuck there. / 选实际到达的最远一步，卡在那里也算。
+      options:
+        - Read the examples only / 只看了示例，还没运行
+        - Tried setup or startup / 尝试了安装或启动
+        - Opened the workspace / 打开了工作台
+        - Opened source from search / 从搜索结果打开了源码
+        - Saved a reading stop / 保存了阅读位置
+        - Exported Markdown / 导出了 Markdown
+        - Took another path / 使用了其他流程
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: What helped or got in the way? / 哪一步有用，或让你卡住了？
+      description: Did it answer your question? Tell us about one specific moment. A short, reviewed excerpt or screenshot is optional. / 是否解答了你的问题？说一处具体经历即可，可附检查过的短摘录或截图。
+  - type: input
+    id: version
+    attributes:
+      label: CodeAtlas version / 项目版本（可选）
+      description: Release tag or git rev-parse --short HEAD from your CodeAtlas checkout; leave blank if you only read the examples. / 填发布标签，或在 CodeAtlas 目录运行 git rev-parse --short HEAD；只看示例可留空。
+  - type: input
+    id: environment
+    attributes:
+      label: Environment and startup command / 环境与启动命令（可选）
+      placeholder: Windows 11, Chrome, npm run demo; or Ubuntu, Firefox, Docker Compose
