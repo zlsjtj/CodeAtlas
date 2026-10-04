@@ -25,7 +25,7 @@
 
 ## 保存这次阅读
 
-开发版可以保存上面的三个位置和笔记，形成一条可回看的阅读路线。依次保存 `decorators.py:248-250`、`core.py:1090`、`core.py:1441-1442`，然后在“路线”中导出 Markdown。
+可以保存上面的三个位置和笔记，形成一条可回看的阅读路线。依次保存 `decorators.py:248-250`、`core.py:1090`、`core.py:1441-1442`，然后在“路线”中导出 Markdown。
 
 <picture>
   <source media="(max-width: 600px)" srcset="assets/codeatlas-route-mobile.png">
@@ -36,7 +36,7 @@
 
 这个文件由真实工作台导出，未手工改写。三条笔记是沿源码阅读后的注释，不是模型生成的问答；摘录逐条与固定 checkout 核对，文件哈希和提交链接也经过本地检查。界面截图来自 Windows Chromium，桌面 1120 × 1100、手机 390 × 844。没有核对远端链接的可访问性，也没有声称自动分析出调用关系。
 
-路线只保存在当前浏览器。打开某个位置时读取当前工作区，保存时的摘录不会自动更新。功能边界见[阅读路线说明](reading-route.md)，Click 摘录沿用 [BSD-3-Clause 许可](../THIRD_PARTY_NOTICES.md)。这项功能尚未包含在已发布的 `v0.1.0-preview.2` 中。
+路线只保存在当前浏览器。打开某个位置时读取当前工作区，保存时的摘录不会自动更新。功能边界见[阅读路线说明](reading-route.md)，Click 摘录沿用 [BSD-3-Clause 许可](../THIRD_PARTY_NOTICES.md)。这项功能从 `v0.1.0-preview.3` 起提供。
 
 复现截图与导出：保持 `npm run demo` 运行，在另一终端执行 `node frontend/scripts/capture-reading-route.mjs`。脚本使用独立浏览器，不读取已有浏览器数据；成功后更新上述示例、截图和核对记录，失败记录留在 `data/reading-route-capture/`。自定义端口可设置 `DEMO_WEB_URL` 与 `DEMO_API_URL`。英文版加 `--locale en`，不是翻译后覆盖截图。
 

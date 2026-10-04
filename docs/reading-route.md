@@ -1,6 +1,6 @@
 # 阅读路线
 
-开发版新增，不包含在 `v0.1.0-preview.2` 中。没有模型调用，也不会修改仓库文件。
+从 `v0.1.0-preview.3` 起提供。没有模型调用，也不会修改仓库文件。
 
 ## 用一次
 
@@ -38,7 +38,7 @@
 
 ## English
 
-Available in the development version, not `v0.1.0-preview.2`. Save a loaded source range with the bookmark-plus button, then open Route to edit notes, reorder stops or export Markdown. There are no model calls or repository writes.
+Available from `v0.1.0-preview.3`. Save a loaded source range with the bookmark-plus button, then open Route to edit notes, reorder stops or export Markdown. There are no model calls or repository writes.
 
 See the [actual Click export](examples/click-reading-route.en.md) and [capture steps](reading-example.en.md#keep-the-reading-route) for a complete three-stop example.
 

@@ -1,48 +1,51 @@
-# v0.1.0-preview.2 阅读预览版 / Reading Preview
+# v0.1.0-preview.3 · Reading Routes
 
-已发布：[v0.1.0-preview.2](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.2)，对应提交 [`4c9b6aa`](https://github.com/zlsjtj/CodeAtlas/commit/4c9b6aa083cd09d22baf6868664da76285da31f8)。这是代码阅读预览版，不是稳定版。
+**把关键源码、阅读笔记和版本来源保存成一条路线，再导出为 Markdown。** 读完一个问题，也留下一份能复查、能分享的记录。整个阅读与导出过程无需模型 Key。
 
-## 可以试什么
+<picture>
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/zlsjtj/CodeAtlas/v0.1.0-preview.3/docs/assets/codeatlas-route-mobile.png">
+  <img alt="CodeAtlas 阅读路线工作台：Click 的三处源码、阅读笔记与 Markdown 导出" src="https://raw.githubusercontent.com/zlsjtj/CodeAtlas/v0.1.0-preview.3/docs/assets/codeatlas-route.png">
+</picture>
 
-这是一个不需要模型 Key 的代码阅读预览版。导入本地目录或公开 GitHub 仓库，搜索关键词或符号，再打开带行号的源码核对上下文。
+Click 实例：从装饰器创建命令，读到回调执行。[打开实际导出的 Markdown](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/docs/examples/click-reading-route.md) · [阅读与搜索实录](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/docs/assets/codeatlas-reading.gif)
 
-第一次试用建议跟着 Click 示例：安装 Python 3.11+、Node.js 20.12+ 和 Git，再克隆这个预览版：
+## 这版的新用法
+
+- **读到关键位置，随手留下笔记。** 选择源码行范围，保存摘录与注释，之后可以回到对应文件继续读。
+- **把跨文件的线索排成路线。** 修改标题和笔记、调整顺序、删除或撤销最近一次删除，在同一处整理阅读过程。
+- **导出一份带来源的记录。** Markdown 保留摘录、行号、笔记和文件哈希；文件内容与提交核对一致、GitHub origin 可识别时，附上固定提交链接。
+
+## 直接试一次
+
+准备 Python 3.11+、Node.js 20.12+ 和 Git：
 
 ```sh
-git clone --branch v0.1.0-preview.2 https://github.com/zlsjtj/CodeAtlas.git
+git clone --branch v0.1.0-preview.3 https://github.com/zlsjtj/CodeAtlas.git
 cd CodeAtlas
 npm run setup
 npm run demo
 ```
 
-打开终端打印的地址，搜索 `callback=f`。固定版本的 Click 已导入并索引；沿[三处源码](reading-example.md)查看装饰器如何保存、调用原函数。示例不用已有模型 Key，也不覆盖 `.env` 或普通开发数据库。
+打开终端打印的地址。固定版本的 Click 已导入并索引：搜索 `callback=f`，打开源码，点击行号旁的书签加号保存位置，再到“路线”中导出 Markdown。退出按 `Ctrl+C`。
 
-读自己的仓库用 `npm run dev`。另提供仅绑定本机的 Docker Compose；挂载和启动说明见 [README](../README.md)。中英文首页分别使用对应界面的实录，手机显示单栏静态图。
+示例使用独立数据，不覆盖 `.env`，也不使用其中的模型 Key。读自己的仓库用 `npm run dev`；Docker 入口和配置见[本版本 README](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/README.md)。
 
-## 已验证与未验证
-
-发布提交 `4c9b6aa` 的 [CI](https://github.com/zlsjtj/CodeAtlas/actions/runs/37195163701)已通过 Windows、Ubuntu 和 Linux Docker 验证，包含示例准备与重复导入、后端回归、前端类型检查及构建、浏览器测试，以及容器重建后的索引保留。这些结果对应本预览版，不代表后续提交也已通过。
-
-前一轮演示提交 `4010666` 的[验证记录](https://github.com/zlsjtj/CodeAtlas/actions/runs/37192032213)仍可查看。
-
-- 真实模型问答尚未验收，六道固定问题仍为 `not_run`。实录没有模型调用，浏览器测试中的模型替身不代表真实效果。
-- 搜索是关键词和正则符号匹配，不是语义搜索或调用图。单次最多读取 200 行。
-- 草案应用需要确认，并检查文件哈希；检查失败只回滚本次修改的目标文件。
-- pytest 和 npm scripts 会执行仓库代码。没有执行沙箱、鉴权或多用户隔离，只对可信仓库运行检查，不直接部署到公网。
-- macOS 和大规模仓库性能尚未验收。
-
-遇到启动或搜索问题，请在 [Issue](https://github.com/zlsjtj/CodeAtlas/issues/new/choose) 中附系统、版本、复现步骤和公开最小样例，不上传密钥或私有代码。
+路线保存在当前浏览器。分享前检查摘录和笔记，移除私有代码与凭据。仅在本机运行服务，只对信任的仓库执行检查。[路线与版本说明](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/docs/reading-route.md) · [模型配置与运行说明](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/docs/development.md#模型与运行说明)
 
 ## English
 
-Published as [v0.1.0-preview.2](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.2) at commit [`4c9b6aa`](https://github.com/zlsjtj/CodeAtlas/commit/4c9b6aa083cd09d22baf6868664da76285da31f8). This is a prerelease, not a stable release.
+**Keep a trail through the code, then share it as Markdown.** Reading Routes lets you save source ranges with notes, put them in reading order, and export the result. No model key is needed.
 
-This preview focuses on local code reading without a model key: import a repository, search text or symbols, and inspect numbered source lines.
+[See the actual Click export](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/docs/examples/click-reading-route.en.md) · [English workspace screenshot](https://raw.githubusercontent.com/zlsjtj/CodeAtlas/v0.1.0-preview.3/docs/assets/codeatlas-route-en.png)
 
-With Python 3.11+, Node.js 20.12+ and Git installed, clone the `v0.1.0-preview.2` tag using the commands above, run `npm run setup`, then `npm run demo`. Open the printed URL and switch the workspace to English. The pinned Click checkout is already indexed; search `callback=f` and follow the [callback example](reading-example.en.md). Use `npm run dev` for your own repositories, or follow the [Docker instructions](../README.en.md#docker-compose).
+- Save a source range with a note, then reopen its location when you return to the code.
+- Edit notes and the route title, reorder stops, or undo the last removal.
+- Export excerpts, line ranges, notes, and file hashes. Commit-pinned GitHub links are included when file contents match the commit and the origin URL is supported.
 
-The release commit passed [CI on Windows, Ubuntu and Linux Docker](https://github.com/zlsjtj/CodeAtlas/actions/runs/37195163701). This result applies to the tagged commit, not later changes.
+Run the commands above, open the printed URL, and switch the workspace to English. The pinned Click example is already indexed. Search `callback=f`, save a range with the bookmark-plus button, then open Route to export Markdown.
 
-Real-model Q&A remains unvalidated. Search uses keywords and regexes, not semantic retrieval. Reads are capped at 200 lines. Checks execute repository code without a sandbox; use trusted repositories only and do not expose the service publicly. macOS and large-repository performance have not been validated.
+Routes stay in the current browser. Review excerpts before sharing them. Keep the service local and run checks only on trusted repositories. See the [versioned README](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/README.en.md) for Docker and optional model setup, and [execution notes](https://github.com/zlsjtj/CodeAtlas/blob/v0.1.0-preview.3/docs/development.md#model-and-execution-notes) for configuration and validation details.
 
-Please report startup failures or searches that cannot locate expected code, with reproducible steps and a minimal public example. Remove credentials and private source before sharing.
+---
+
+[Changes since preview.2](https://github.com/zlsjtj/CodeAtlas/compare/v0.1.0-preview.2...v0.1.0-preview.3) · [Previous release](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.2) · [Report a problem or share feedback](https://github.com/zlsjtj/CodeAtlas/issues/new/choose)
