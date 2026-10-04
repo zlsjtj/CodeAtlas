@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#快速开始">快速开始</a> ·
-  <a href="docs/examples/click-showcase-route.md">看看导出的笔记</a> ·
+  <a href="#看看能读懂什么">阅读案例</a> ·
   <a href="docs/development.md">文档</a> ·
   <a href="README.en.md">English</a>
 </p>
@@ -23,9 +23,24 @@
 
 <p align="center">先看成果，再看怎么做。约 14 秒真实操作剪辑，部分 2 倍速，无模型调用。<br><a href="docs/assets/codeatlas-showcase-full.gif">40 秒完整实录</a> · <a href="docs/examples/click-showcase-route.md">打开本次导出的笔记</a> · <a href="docs/reading-example.md">跟着案例读一遍</a></p>
 
-## 一次阅读，一份能带走的笔记
+## 看看能读懂什么
 
-**Click 的 `@command()` 怎样把函数变成命令？** 从两个文件里找到三个位置，整理后就有了下面这条阅读路线。
+### Click：从装饰器到回调执行
+
+**`@command()` 怎样把普通函数变成命令？** 两个文件、三个阅读位置，串起命令创建、回调保存和最终调用。
+
+[跟着源码读一遍](docs/reading-example.md) · [打开实际导出的笔记](docs/examples/click-showcase-route.md)
+
+### CodeAtlas：一次搜索怎样穿过前后端
+
+**搜索怎样从 React 走到 FastAPI，再返回结果？** 五个源码文件、六个阅读位置，串起请求发送、索引查询、排序和界面展示。
+
+[跟着源码读一遍](docs/codeatlas-search.md) · [打开实际导出的笔记](docs/examples/codeatlas-search-route.md)
+
+两份笔记均由工作台实际导出，保留源码摘录、笔记和固定提交链接，保存时间与文件哈希收在“来源与版本”中。无需安装就能在 GitHub 上阅读，也可以用同样的方式整理自己的仓库。
+
+<details>
+<summary><strong>展开 Click 的三处关键源码</strong></summary>
 
 1. **创建命令** · [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248)
 
@@ -45,15 +60,9 @@
 
    执行命令时，把解析后的参数交给 callback。
 
-**[打开工作台实际导出的 Markdown →](docs/examples/click-showcase-route.md)**
+这里是笔记节选。[查看完整摘录与笔记](docs/examples/click-showcase-route.md)
 
-这里是笔记节选；导出文件保留完整选中片段、笔记和固定提交链接，保存时间与文件哈希收在“来源与版本”中。可以直接在 GitHub 上阅读，也可以用同样的方式整理自己的仓库。
-
-### 再读一个跨前后端的例子
-
-**CodeAtlas 自己的一次搜索，怎样从 React 走到 FastAPI，再返回结果？** 沿着五个源码文件，串起请求发送、索引查询、排序和界面展示。六个阅读位置，每一步都有源码摘录与固定版本链接。
-
-[跟着案例读一遍](docs/codeatlas-search.md) · [直接看导出的笔记](docs/examples/codeatlas-search-route.md)
+</details>
 
 ## 从找到代码，到讲清代码
 
@@ -67,10 +76,10 @@
 
 ## 快速开始
 
-准备 **Python 3.11+、Node.js 20.12+ 和 Git**，然后运行：
+试用版本：[v0.1.0-preview.4](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.4)。准备 **Python 3.11+、Node.js 20.12+ 和 Git**，然后运行：
 
 ```sh
-git clone https://github.com/zlsjtj/CodeAtlas.git
+git clone --branch v0.1.0-preview.4 https://github.com/zlsjtj/CodeAtlas.git
 cd CodeAtlas
 npm run setup
 npm run demo

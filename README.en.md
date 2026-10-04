@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
-  <a href="docs/examples/click-showcase-route.en.md">Export example</a> ·
+  <a href="#reading-examples">Reading examples</a> ·
   <a href="docs/development.md">Docs</a> ·
   <a href="README.md">中文</a>
 </p>
@@ -23,9 +23,24 @@
 
 <p align="center">The result, then the workflow. About 14 seconds of real actions, edited with some sections at 2× speed. No model calls.<br><a href="docs/assets/codeatlas-showcase-full-en.gif">Full 40-second recording</a> · <a href="docs/examples/click-showcase-route.en.md">Open the actual export</a> · <a href="docs/reading-example.en.md">Follow the walkthrough</a></p>
 
-## A Walkthrough You Can Take With You
+## Reading Examples
 
-**How does Click's `@command()` turn a function into a command?** Three locations in two files become a reading route:
+### Click: From Decorator to Callback
+
+**How does `@command()` turn a function into a command?** Three stops in two files connect command creation, callback storage, and invocation.
+
+[Follow the source](docs/reading-example.en.md) · [Read the actual export](docs/examples/click-showcase-route.en.md)
+
+### CodeAtlas: Follow a Search Across the Stack
+
+**How does a search travel from React to FastAPI and back?** Six stops in five files connect request handling, index lookup, ranking, and rendering.
+
+[Follow the source](docs/codeatlas-search.en.md) · [Read the actual export](docs/examples/codeatlas-search-route.en.md)
+
+Both notes were exported from the workspace. They keep source excerpts, annotations, and commit-pinned links, with timestamps and file hashes under “Source and version.” Read them on GitHub without installing anything, then use the same workflow for your own repository.
+
+<details>
+<summary><strong>See the three key lines from Click</strong></summary>
 
 1. **Create the command** · [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248)
 
@@ -45,15 +60,9 @@
 
    Command execution passes the parsed parameters to that callback.
 
-**[Read the actual Markdown export →](docs/examples/click-showcase-route.en.md)**
+These are highlights from the notes. [Read the full excerpts and annotations](docs/examples/click-showcase-route.en.md)
 
-These are highlights from the notes. The export keeps the full selected excerpts, notes, and commit-pinned links, with timestamps and file hashes under “Source and version.” Read it directly on GitHub, or use the same workflow for your own repository.
-
-### Follow a Search Across the Stack
-
-**How does CodeAtlas's own search travel from React to FastAPI and back?** Follow request handling, index lookup, ranking, and rendering across five source files. Six reading stops, each with a source excerpt and a commit-pinned link.
-
-[Follow the walkthrough](docs/codeatlas-search.en.md) · [Read the exported notes](docs/examples/codeatlas-search-route.en.md)
+</details>
 
 ## From Finding Code to Explaining It
 
@@ -67,10 +76,10 @@ Routes stay in the current browser and can be exported at any time. [Using readi
 
 ## Quick Start
 
-With **Python 3.11+, Node.js 20.12+, and Git** installed:
+Try [v0.1.0-preview.4](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.4). With **Python 3.11+, Node.js 20.12+, and Git** installed:
 
 ```sh
-git clone https://github.com/zlsjtj/CodeAtlas.git
+git clone --branch v0.1.0-preview.4 https://github.com/zlsjtj/CodeAtlas.git
 cd CodeAtlas
 npm run setup
 npm run demo
