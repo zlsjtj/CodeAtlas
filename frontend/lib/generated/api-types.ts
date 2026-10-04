@@ -1028,6 +1028,11 @@ export interface components {
             /** End Line */
             end_line?: number | null;
             response_language?: components["schemas"]["ResponseLanguage"] | null;
+            /**
+             * Include Provenance
+             * @default false
+             */
+            include_provenance: boolean;
         };
         /** RepositoryCreate */
         RepositoryCreate: {
@@ -1185,6 +1190,20 @@ export interface components {
             limit: number;
             response_language?: components["schemas"]["ResponseLanguage"] | null;
         };
+        /** SourceProvenance */
+        SourceProvenance: {
+            /** Content Sha256 */
+            content_sha256: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "commit" | "modified" | "local" | "unknown";
+            /** Revision */
+            revision?: string | null;
+            /** File Url */
+            file_url?: string | null;
+        };
         /** ToolExecutionResponse */
         ToolExecutionResponse: {
             /** Tool Name */
@@ -1233,6 +1252,7 @@ export interface components {
             node_type?: ("file" | "directory") | null;
             /** Depth */
             depth?: number | null;
+            provenance?: components["schemas"]["SourceProvenance"] | null;
         };
         /** ValidationError */
         ValidationError: {

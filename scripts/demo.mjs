@@ -27,6 +27,9 @@ export async function prepareExample(parent, example = clickExample, signal) {
       || await git(target, ["status", "--porcelain", "--untracked-files=all", "--ignored"], signal)) {
       throw new Error(`Example checkout has changed. Move it aside before retrying: ${target}`);
     }
+    if (!(await git(target, ["remote"], signal)).split("\n").includes("origin")) {
+      await git(target, ["remote", "add", "origin", example.url], signal);
+    }
     return target;
   }
 
@@ -34,6 +37,7 @@ export async function prepareExample(parent, example = clickExample, signal) {
   const staging = mkdtempSync(path.join(base, ".click-"));
   try {
     await git(staging, ["init"], signal);
+    await git(staging, ["remote", "add", "origin", example.url], signal);
     await git(staging, ["-c", "core.autocrlf=false", "fetch", "--depth=1", example.url, example.commit], signal);
     await git(staging, ["-c", "core.autocrlf=false", "-c", "core.hooksPath=", "checkout", "--detach", example.commit], signal);
     if (await git(staging, ["rev-parse", "HEAD"], signal) !== example.commit) throw new Error("Example commit mismatch.");

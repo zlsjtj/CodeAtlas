@@ -10,6 +10,13 @@ ToolItemKind = Literal["tree_node", "search_match", "file_segment", "symbol_matc
 ToolNodeType = Literal["file", "directory"]
 
 
+class SourceProvenance(BaseModel):
+    content_sha256: str
+    state: Literal["commit", "modified", "local", "unknown"]
+    revision: str | None = None
+    file_url: str | None = None
+
+
 class ToolResultItem(BaseModel):
     kind: ToolItemKind
     path: str
@@ -22,6 +29,7 @@ class ToolResultItem(BaseModel):
     symbol_type: str | None = None
     node_type: ToolNodeType | None = None
     depth: int | None = None
+    provenance: SourceProvenance | None = None
 
 
 class ToolExecutionResponse(BaseModel):
@@ -54,6 +62,7 @@ class ReadFileRequest(BaseModel):
     start_line: int = Field(default=1, ge=1)
     end_line: int | None = Field(default=None, ge=1)
     response_language: ResponseLanguage | None = None
+    include_provenance: bool = False
 
     @model_validator(mode="after")
     def validate_range(self) -> "ReadFileRequest":

@@ -19,6 +19,7 @@ from app.schemas.tool import (
 )
 from app.services.indexing_service import IndexingService
 from app.services.repository_service import RepositoryService, RepositoryValidationError
+from app.services.source_provenance import describe_source
 
 MAX_READ_LINES = 200
 
@@ -168,7 +169,8 @@ class RepositoryQueryService:
             )
 
         try:
-            lines = file_path.read_text(encoding="utf-8").splitlines()
+            content = file_path.read_text(encoding="utf-8")
+            lines = content.splitlines()
         except UnicodeDecodeError as exc:
             raise RepositoryValidationError(
                 self._localized_message(
@@ -207,6 +209,11 @@ class RepositoryQueryService:
             end_line=end_line,
             language=self.indexing_service.scanner.detect_language(file_path),
             content=segment,
+            provenance=describe_source(
+                self.repository_service.resolve_repository_root(repository, payload.response_language),
+                file_path,
+                content,
+            ) if payload.include_provenance else None,
         )
         return ToolExecutionResponse(
             tool_name="read_file",

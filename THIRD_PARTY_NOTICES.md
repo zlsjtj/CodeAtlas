@@ -14,7 +14,9 @@ Source syntax colors use `lowlight` (MIT) and its `highlight.js` engine
 
 ## Click Demo
 
-The Chinese and English `docs/assets/codeatlas-reading*.gif` and `.png` recordings show source from
+The Chinese and English `docs/assets/codeatlas-reading*.gif`, `codeatlas-reading*.png`,
+and `codeatlas-route*.png` captures, together with `docs/examples/click-reading-route*.md`
+exports and their `docs/evidence/reading-route*.json` records, show source from
 [pallets/click](https://github.com/pallets/click/tree/06b2a678741131fd577ce170e23e5ca0aeba0309),
 commit `06b2a678741131fd577ce170e23e5ca0aeba0309`. This is an independent
 reading example, not an endorsement by Pallets. The checkout is not vendored.

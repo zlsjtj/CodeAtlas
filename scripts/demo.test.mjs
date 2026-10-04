@@ -24,8 +24,24 @@ test("example checkout uses the exact commit and is reused without downloading",
   const { parent, example } = fixture(t);
   const folder = await prepareExample(parent, example);
   assert.equal(readFileSync(path.join(folder, "example.py"), "utf8"), "def command():\n    pass\n");
+  const origin = () => execFileSync("git", ["-C", folder, "remote", "get-url", "origin"], { encoding: "utf8", windowsHide: true }).trim();
+  assert.equal(origin(), example.url);
   assert.equal(await prepareExample(parent, { ...example, url: "/unreachable" }), folder);
+  assert.equal(origin(), example.url);
   assert.deepEqual(readdirSync(parent), [`click-${example.commit}`]);
+});
+
+test("an older clean example gets a missing origin without changing its checkout", async (t) => {
+  const { parent, example } = fixture(t);
+  const folder = await prepareExample(parent, example);
+  const git = (...args) => execFileSync("git", ["-C", folder, ...args], { encoding: "utf8", windowsHide: true }).trim();
+  git("remote", "remove", "origin");
+  const content = readFileSync(path.join(folder, "example.py"), "utf8");
+  assert.equal(await prepareExample(parent, example), folder);
+  assert.equal(git("remote", "get-url", "origin"), example.url);
+  assert.equal(git("rev-parse", "HEAD"), example.commit);
+  assert.equal(git("status", "--porcelain"), "");
+  assert.equal(readFileSync(path.join(folder, "example.py"), "utf8"), content);
 });
 
 test("example setup refuses to replace modified or untracked files", async (t) => {

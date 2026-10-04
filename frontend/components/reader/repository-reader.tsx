@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronRight, FileCode2, Folder, RefreshCw, Search, WrapText } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookmarkPlus, ChevronDown, ChevronRight, FileCode2, Folder, RefreshCw, Search, WrapText } from "lucide-react";
 import type { SourceTarget, useRepositoryReader } from "@/lib/hooks/use-repository-reader";
 import type { WorkspaceLocale } from "@/lib/workspace-i18n";
 import { highlightMatches, sourceLines, type SourceToken } from "@/lib/source-highlighting";
+import type { useReadingRoute } from "@/lib/hooks/use-reading-route";
+import type { ToolResultItem } from "@/lib/types";
+import { SaveReadingStop } from "./reading-route";
 
 type Reader = ReturnType<typeof useRepositoryReader>;
 
@@ -43,11 +46,14 @@ export function RepositoryTree({ reader, locale, onOpenSource }: { reader: Reade
   </section>;
 }
 
-export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; locale: WorkspaceLocale; indexed: boolean }) {
+export function RepositoryReader({ reader, locale, indexed, route, onSaved }: {
+  reader: Reader; locale: WorkspaceLocale; indexed: boolean; route: ReturnType<typeof useReadingRoute>; onSaved: () => void;
+}) {
   const en = locale === "en";
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"search" | "find-symbol">("search");
   const [wrapLines, setWrapLines] = useState(false);
+  const [saving, setSaving] = useState<ToolResultItem | null>(null);
   const source = reader.source;
   const start = source?.start_line ?? 1;
   const end = source?.end_line ?? 0;
@@ -83,6 +89,9 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
       <span className="source-path">{reader.sourceTarget?.path ?? (en ? "Source" : "源码")}</span>
       {source ? <div className="source-pagination">
         <span className="muted">{start}–{end}</span>
+        <button className="icon-button" disabled={!source.provenance || reader.reading || !route.loaded}
+          title={en ? "Save to reading route" : "保存到阅读路线"} aria-label={en ? "Save to reading route" : "保存到阅读路线"}
+          onClick={() => setSaving(source)}><BookmarkPlus size={16} /></button>
         <button className="icon-button" aria-pressed={wrapLines} title={en ? "Wrap lines" : "自动换行"} aria-label={en ? "Wrap lines" : "自动换行"}
           onClick={() => setWrapLines(!wrapLines)}><WrapText size={16} /></button>
         <button className="icon-button" disabled={start <= 1 || reader.reading} title={en ? "Previous lines" : "上一段"} aria-label={en ? "Previous lines" : "上一段"}
@@ -92,6 +101,9 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
       </div> : null}
     </div>
     {reader.sourceTarget?.fromCitation ? <p className="notice">{en ? "Current workspace file. It may have changed since the answer was generated." : "当前工作区文件，可能与回答生成时的版本不同。"}</p> : null}
+    {reader.sourceTarget?.savedHash && source ? <p className="notice" role="status">{source.provenance?.content_sha256 === reader.sourceTarget.savedHash
+      ? (en ? "Current workspace file matches the saved file hash." : "当前工作区文件与保存时的文件哈希一致。")
+      : (en ? "Current workspace file differs from the saved version, or its hash is unavailable. Saved line numbers may have shifted." : "当前文件与保存版本不同，或无法核对哈希；保存的行号可能已偏移。")}</p> : null}
     {reader.sourceError ? <div className="inline-error" role="alert">{reader.sourceError}
       <button className="icon-button" title={en ? "Retry reading" : "重新读取"} aria-label={en ? "Retry reading" : "重新读取"}
         onClick={() => reader.sourceTarget && void reader.openSource(reader.sourceTarget)}><RefreshCw size={16} /></button></div> : null}
@@ -101,5 +113,6 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
         <span className="line-number" aria-hidden="true">{start + index}</span><code><HighlightedLine tokens={tokens} query={reader.sourceTarget?.searchQuery} /></code>
       </span>)}</pre>
     </div> : !reader.reading && !reader.sourceError ? <div className="reader-empty"><FileCode2 size={32} /><p>{en ? "No file selected" : "尚未选择文件"}</p></div> : null}
+    {saving ? <SaveReadingStop source={saving} route={route} locale={locale} onClose={() => { setSaving(null); route.clearTransientError(); }} onSaved={onSaved} /> : null}
   </section>;
 }

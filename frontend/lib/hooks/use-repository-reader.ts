@@ -5,7 +5,7 @@ import { repositoryTool } from "@/lib/api";
 import type { RepositoryRecord, ToolResultItem } from "@/lib/types";
 import type { WorkspaceLocale } from "@/lib/workspace-i18n";
 
-export type SourceTarget = { path: string; line?: number; endLine?: number; fromCitation?: boolean; resultKey?: string; searchQuery?: string };
+export type SourceTarget = { path: string; line?: number; endLine?: number; fromCitation?: boolean; resultKey?: string; searchQuery?: string; savedHash?: string };
 
 export function useRepositoryReader(repository: RepositoryRecord, locale: WorkspaceLocale) {
   const [tree, setTree] = useState<Record<string, ToolResultItem[]>>({});
@@ -100,7 +100,7 @@ export function useRepositoryReader(repository: RepositoryRecord, locale: Worksp
     const start = Math.max(1, target.line ?? 1);
     try {
       const response = await repositoryTool("read", {
-        repo_id: repository.id, path: target.path, start_line: start, end_line: start + 199,
+        repo_id: repository.id, path: target.path, start_line: start, end_line: start + 199, include_provenance: true,
       }, locale, signal);
       if (!signal.aborted) setSource(response.items[0] ?? null);
     } catch (error) {

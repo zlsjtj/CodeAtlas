@@ -2,11 +2,15 @@
 
 把陌生仓库放到一个本地工作台里读：搜索关键词或符号，沿行号核对源码。基础阅读不需要模型 Key。
 
-[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE) · 中文 | [English](README.en.md)
+[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE)
+
+[快速体验](#在本机试一次) · [阅读案例](docs/reading-example.md) · [预览版](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.2) · [English](README.en.md)
 
 ## 从一个问题开始
 
 **Click 的 `@command()` 怎样把函数变成可执行的命令？**
+
+在这个固定版本里，装饰器把原函数交给 `Command` 保存为回调，执行命令时再经 `Context.invoke()` 调用。下面沿三处源码核对这个过程。
 
 <picture>
   <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-mobile.png">
@@ -23,6 +27,8 @@
 3. 搜索 `ctx.invoke(self.callback`：命令执行时，把解析后的参数交给回调，[core.py:1442](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442)。
 
 这是手动沿源码核对的阅读路径，不是自动生成的调用图。
+
+读完后可以把这三处源码和笔记保存为[阅读路线](docs/reading-route.md)，再[导出 Markdown](docs/examples/click-reading-route.md)。这是工作台实际导出的 Click 示例，不是模型回答。路线保存在当前浏览器；此功能属于开发版，不包含在 `v0.1.0-preview.2` 中。
 
 ## 在本机试一次
 

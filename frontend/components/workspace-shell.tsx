@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, FilePenLine, ListChecks, Menu, MessageSquare, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
+import { BookOpen, FilePenLine, ListChecks, ListOrdered, Menu, MessageSquare, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
 import { ChecksPanel } from "@/components/checks/checks-panel";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { ChatHistoryPanel } from "@/components/chat/chat-history-panel";
@@ -10,6 +10,8 @@ import { JobActivityPanel } from "@/components/jobs/job-activity-panel";
 import { PatchDraftPanel } from "@/components/patches/patch-draft-panel";
 import { RepositoryImportForm } from "@/components/repositories/repository-import-form";
 import { RepositoryReader, RepositoryTree } from "@/components/reader/repository-reader";
+import { ReadingRoutePanel } from "@/components/reader/reading-route";
+import { useReadingRoute } from "@/lib/hooks/use-reading-route";
 import { useChatWorkspace } from "@/lib/hooks/use-chat-workspace";
 import { usePatchChecksWorkspace } from "@/lib/hooks/use-patch-checks-workspace";
 import { useWorkspaceRepositories } from "@/lib/hooks/use-workspace-repositories";
@@ -17,7 +19,7 @@ import { useRepositoryReader, type SourceTarget } from "@/lib/hooks/use-reposito
 import { formatRepositoryStatus, type WorkspaceLocale } from "@/lib/workspace-i18n";
 import type { RepositoryRecord } from "@/lib/types";
 
-type View = "read" | "chat" | "patch" | "checks";
+type View = "read" | "route" | "chat" | "patch" | "checks";
 
 export function WorkspaceShell() {
   const [locale, setLocale] = useState<WorkspaceLocale>("zh-CN");
@@ -94,11 +96,13 @@ function RepositorySession({ repository, locale, modelConfigured, repositories, 
     return () => window.removeEventListener("keydown", close);
   }, []);
   const reader = useRepositoryReader(repository, locale);
+  const route = useReadingRoute(repository);
   const common = { locale, selectedRepoId: repository.id, setSelectedRepoId: onSelect, setError, setStatusMessage };
   const chat = useChatWorkspace({ ...common, repositories: repositories.repositories });
   const changes = usePatchChecksWorkspace({ ...common, selectedRepository: repository });
   const tabs = [
     { id: "read" as const, label: en ? "Read" : "阅读", icon: BookOpen },
+    { id: "route" as const, label: en ? "Route" : "路线", icon: ListOrdered },
     { id: "chat" as const, label: en ? "Ask" : "问答", icon: MessageSquare },
     { id: "patch" as const, label: en ? "Changes" : "改动", icon: FilePenLine },
     { id: "checks" as const, label: en ? "Checks" : "检查", icon: ListChecks },
@@ -132,7 +136,9 @@ function RepositorySession({ repository, locale, modelConfigured, repositories, 
         {chat.chatHistory.length ? <details className="sidebar-details"><summary>{en ? "Questions" : "历史提问"}</summary><ChatHistoryPanel activeSessionId={chat.chatResponse?.session_id ?? null}
           entries={chat.chatHistory} locale={locale} onSelectSession={chat.handleSelectHistory} /></details> : null}
       </aside>
-      {view === "read" ? <><RepositoryReader reader={reader} locale={locale} indexed={repository.status === "ready"} />{showQuestions ? <aside className="question-sidebar">{questionPanel}</aside> : null}</> : null}
+      {view === "read" ? <><RepositoryReader reader={reader} locale={locale} indexed={repository.status === "ready"} route={route}
+        onSaved={() => setStatusMessage(en ? "Saved to reading route." : "已保存到阅读路线。")} />{showQuestions ? <aside className="question-sidebar">{questionPanel}</aside> : null}</> : null}
+      {view === "route" ? <div className="full-panel"><ReadingRoutePanel route={route} repositoryName={repository.name} locale={locale} onOpenSource={openSource} /></div> : null}
       {view === "chat" ? <div className="full-panel chat-view">{questionPanel}</div> : null}
       {view === "patch" ? <div className="full-panel"><PatchDraftPanel modelConfigured={modelConfigured} applyResponse={changes.patchApplyResponse} batchApplyResponse={changes.patchBatchApplyResponse}
         batchResponse={changes.patchBatchResponse} isApplying={changes.isApplyingPatch} isApplyingAndChecking={changes.isApplyingAndChecking} isApplyingBatch={changes.isApplyingBatchPatch}

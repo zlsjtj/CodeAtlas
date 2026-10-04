@@ -2,11 +2,15 @@
 
 Read unfamiliar codebases in a local workspace: search text or symbols, then follow the source with line numbers. No model key needed for code reading.
 
-[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE) · [中文](README.md) | English
+[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE)
+
+[Quick start](#try-it-locally) · [Example](docs/reading-example.en.md) · [Preview](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.2) · [中文](README.md)
 
 ## Follow One Question
 
 **How does Click's `@command()` turn a function into an executable command?**
+
+`Command` stores the decorated function as its callback, then runs it through `Context.invoke()`. The recording checks this path in the pinned source.
 
 <picture>
   <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-en-mobile.png">
@@ -23,6 +27,8 @@ In the pinned checkout:
 3. Search `ctx.invoke(self.callback`: command execution passes the parsed parameters to the callback, [core.py:1442](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442).
 
 This is a manual source-reading path, not an automatically generated call graph.
+
+Keep these three locations and your notes as a [reading route](docs/reading-route.md#english), then [export Markdown](docs/examples/click-reading-route.en.md). This Click example is an actual workspace export, not a model answer. Routes stay in the current browser. This development feature is not included in `v0.1.0-preview.2`.
 
 ## Try It Locally
 

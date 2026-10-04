@@ -164,6 +164,27 @@ pre { overflow: auto; }
 .sidebar-details .panel-copy, .sidebar-details .summary-grid { display: none; }
 .sidebar-details .button-row { gap: 4px; }
 .drawer-backdrop { display: none; }
+.reading-route { max-width: 880px; }
+.route-heading { flex-wrap: wrap; margin-bottom: 8px; }
+.route-heading h2 { font-size: 18px; }
+.route-title-form { display: flex; align-items: flex-end; gap: 8px; margin: 18px 0; max-width: 560px; }
+.route-title-form label { flex: 1; min-width: 0; }
+.route-title-form .icon-button { margin-bottom: 3px; }
+.reading-route-list { padding-left: 24px; margin: 0; }
+.reading-route-list > li { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.reading-route-list > li::marker { color: var(--muted); font-size: 12px; }
+.route-stop-header { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+.route-source-link { overflow-wrap: anywhere; min-width: 0; font: 13px/1.6 var(--font-mono); text-align: left; flex: 1 1 200px; justify-content: flex-start; }
+.route-stop-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.route-stop-actions .icon-button { width: 30px; height: 30px; }
+.route-provenance { margin: 6px 0; overflow-wrap: anywhere; }
+.route-note { white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0; }
+.route-excerpt { margin-top: 10px; font-size: 12px; }
+.route-excerpt pre { background: var(--bg); padding: 12px; max-height: 220px; }
+.route-note-form { display: grid; gap: 10px; margin-block: 12px; }
+.route-path { font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; margin-bottom: 8px; }
+.route-line-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.route-undo { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
 @media (min-width: 1500px) { .reading-layout { grid-template-columns: 250px minmax(400px, 1fr) 390px; } }
 @media (max-width: 1100px) {
   .reading-layout, .reading-layout:not(.view-read), .reading-layout.reader-wide { grid-template-columns: 210px minmax(0, 1fr); }

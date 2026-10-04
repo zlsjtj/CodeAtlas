@@ -37,6 +37,8 @@ def test_openapi_exposes_core_agent_contracts(client):
     assert "response_language" in patch_apply_and_check_properties
     assert "response_language" in tool_search_properties
     assert "response_language" in tool_read_properties
+    assert tool_read_properties["include_provenance"]["default"] is False
+    assert "SourceProvenance" in schemas
     assert "JobRunRead" in schemas
     assert "JobRunListResponse" in schemas
     assert "RepositoryImportJobResponse" in schemas

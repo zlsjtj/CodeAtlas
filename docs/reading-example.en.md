@@ -22,6 +22,23 @@ Both language versions show the same Click source, covered by its [BSD-3-Clause 
 
 During capture, a 200-line read starting inside a docstring caused misleading colors on later code. Non-initial pages now highlight each line independently. Multiline colors can be incomplete in these fragments; colors do not establish syntax correctness. A regression test covers the truncated-docstring case, alongside the recorder's text comparisons.
 
+## Keep the Reading Route
+
+The development version can save these locations with notes: `decorators.py:248-250`, `core.py:1090`, and `core.py:1441-1442`. Open Route to review their order and export Markdown.
+
+<picture>
+  <source media="(max-width: 600px)" srcset="assets/codeatlas-route-en-mobile.png">
+  <img alt="A saved Click reading route with notes and excerpts for creating, storing and invoking a callback" src="assets/codeatlas-route-en.png">
+</picture>
+
+[Actual Markdown export](examples/click-reading-route.en.md) · [Source and screenshot checks](evidence/reading-route-en.json)
+
+The file is the workspace's unedited export. The three notes are annotations from reading the source, not model answers. Excerpts were compared with the pinned checkout; whole-file hashes and commit-link construction were checked locally. Screenshots use the English interface on Windows Chromium, at 1120 by 1100 and 390 by 844 pixels. Remote link availability was not checked, and the tool did not infer the call graph.
+
+Routes stay in the current browser. Opening a stop reads the current workspace; it does not update the saved excerpt. See [storage and version boundaries](reading-route.md#english) and the Click excerpts' [BSD-3-Clause notice](../THIRD_PARTY_NOTICES.md). This feature is not part of the published `v0.1.0-preview.2` release.
+
+To reproduce, leave `npm run demo` running and execute `node frontend/scripts/capture-reading-route.mjs --locale en` in another terminal. It uses an isolated browser, without reading an existing profile. A successful run updates the example, screenshots and receipt; failed attempts remain in `data/reading-route-capture/`. Set `DEMO_WEB_URL` and `DEMO_API_URL` for custom ports. The Chinese capture uses the default locale in a separate run.
+
 ## What This Does Not Validate
 
 No model requests were made. The six predeclared Q&A cases remain [`not_run`](evidence/qa-status.json); there are no real-model answer-quality or citation-quality results. Browser-test substitutes are not used in the recording.
