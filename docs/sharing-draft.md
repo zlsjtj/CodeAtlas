@@ -1,31 +1,40 @@
-# 项目介绍草稿
+# 分享材料
 
-以下内容尚未对外发布，不包含用户评价或效果数据。
+## 中文介绍
 
-## 中文
+**CodeAtlas：读懂陌生仓库，留下自己的源码阅读路线。**
 
-CodeAtlas 是一个本地代码阅读工作台：导入仓库后，可以搜索函数或关键词，点击结果核对带行号的源码，不需要模型 Key。配置模型后可围绕代码提问，引用也能打开文件查看；修改代码仍需先预览 diff 再明确应用。
+读源码时，找到一个函数只是开始。CodeAtlas 可以把关键行、源码摘录和你的笔记保存成一条阅读路线，再导出 Markdown，让别人也能沿着这条路读下去。
 
-演示用固定版本的 Click，沿着三次搜索查看装饰器如何保存并调用原函数。安装依赖后运行 `npm run demo` 即可复现，不用先配置模型。当前使用关键词和正则符号检索；模型问答还没有完成真实案例验收。欢迎反馈具体仓库中找不到的代码，或启动时遇到的问题。
+演示用 Click 的 `@command()` 串起命令创建、回调保存和执行。搜索、记笔记、调整顺序、导出都在本地完成，不需要模型 Key。安装依赖后运行 `npm run demo`，就能从同一份源码开始。
 
-项目：https://github.com/zlsjtj/CodeAtlas
+[查看项目与演示](https://github.com/zlsjtj/CodeAtlas) · [直接读导出的笔记](https://github.com/zlsjtj/CodeAtlas/blob/master/docs/examples/click-workflow-route.md)
 
-## English
+欢迎带着一个想读懂的仓库来试，也欢迎分享你整理的阅读路线。
 
-CodeAtlas is a local code-reading workspace. Import a repository, search for a symbol or keyword, and open numbered source lines without a model key. With a model configured, you can ask questions and inspect the referenced files. Changes still require a diff preview and an explicit apply step.
+## English Introduction
 
-The demo follows three searches through a pinned Click checkout to see how a decorator stores and invokes the original function. After setup, run `npm run demo` to reproduce it without configuring a model. Retrieval is keyword- and regex-based. Real-model Q&A is not yet validated against the fixed cases. Reports of startup problems or code that a query fails to locate are especially useful.
+**CodeAtlas: Read the code. Keep the trail.**
 
-Project: https://github.com/zlsjtj/CodeAtlas
+Finding a function is only the start of reading a codebase. CodeAtlas lets you save source excerpts with your own notes, arrange them into a reading route, and export Markdown that someone else can follow.
 
-## GitHub About 建议
+The Click demo traces `@command()` from command creation to callback execution. Search, annotation, and export run locally without a model key. After setup, run `npm run demo` to explore the same pinned source.
 
-Explore unfamiliar codebases locally. Search symbols and read source without a model key.
+[Project and demo](https://github.com/zlsjtj/CodeAtlas/blob/master/README.en.md) · [Read the exported route](https://github.com/zlsjtj/CodeAtlas/blob/master/docs/examples/click-workflow-route.en.md)
 
-Topics 可保留 `code-search`、`developer-tools`、`repository-analysis`、`nextjs`、`fastapi`。About 和 topics 不在 Git 文件中，这份草稿不表示远端设置已经修改。
+Try it with a repository you want to understand, and share the route you discover.
 
-## 展示取舍
+## 配图与演示
 
-参考 [Aider](https://github.com/Aider-AI/aider) 对使用场景的直接说明、[Repomix](https://github.com/yamadashy/repomix) 的快速开始入口、[DeepWiki-Open](https://github.com/AsyncFuncAI/deepwiki-open) 的成果演示。借鉴的是信息顺序，不借用用户评价、不比较未经测量的效果，也不复制其功能规模。
+| 素材 | 用途 |
+| --- | --- |
+| [品牌封面](assets/codeatlas-social-preview.png) | 1280 × 640 PNG，用于链接分享与 GitHub Social preview |
+| [中文实录](assets/codeatlas-workflow.gif) / [English recording](assets/codeatlas-workflow-en.gif) | 40 秒，搜索到导出的完整操作；原速，无模型调用 |
+| [中文静态图](assets/codeatlas-workflow.png) / [English still](assets/codeatlas-workflow-en.png) | 不支持 GIF 或需要静态预览时使用 |
+| [手机截图](assets/codeatlas-workflow-mobile.png) / [Mobile screenshot](assets/codeatlas-workflow-en-mobile.png) | 真实手机尺寸工作台，不将桌面图硬缩到手机宽度 |
 
-下一次迭代先记录外部用户的启动失败和定位问题，再选可复现的问题修复。访问与 clone 数据只能作为试用线索，短期 star 波动不能证明改版有效。提交按完整变更组织，不调整时间或重写历史。
+品牌封面是 AI 生成的概念插画，不是产品界面。工作台图片、GIF 和 Markdown 则来自真实操作；录制开始前已保存回调的两个位置，片中补上装饰器、调整顺序并导出。两次录制的记录见[中文](evidence/workflow-demo.json)和[英文](evidence/workflow-demo-en.json)，封面提示词见[生成记录](evidence/social-preview.json)。
+
+GitHub 的分享封面不随 Git 推送自动生效，需要在仓库 **Settings → General → Social preview** 上传 PNG。素材文件已提供，不表示远端设置已修改。可参考 [GitHub 的设置说明](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/customizing-your-repositorys-social-media-preview)。
+
+以上介绍稿供选择发布，未自动发帖。当前版本入口是 [Reading Routes](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.3)。

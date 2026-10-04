@@ -1,6 +1,6 @@
 <h1 align="center">CodeAtlas</h1>
 
-<p align="center"><strong>Explore the code. Keep the trail.</strong></p>
+<p align="center"><strong>Read the code. Keep the trail.</strong></p>
 <p align="center">Search source, check context, and turn code and notes into a shareable reading route.<br>Runs locally. No model key needed to read, annotate, or export.</p>
 
 <p align="center">
@@ -16,12 +16,12 @@
 </p>
 
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-en-mobile.png">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-reading-en.png">
-  <img alt="CodeAtlas in use: searching callback=f in Click, opening a match, and following the source that stores and invokes the callback" src="docs/assets/codeatlas-reading-en.gif">
+  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-workflow-en-mobile.png">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-workflow-en.png">
+  <img alt="CodeAtlas in use: search Click's source, save an excerpt and note, reorder the reading route, and export Markdown" src="docs/assets/codeatlas-workflow-en.gif">
 </picture>
 
-<p align="center">Search, open, and check Click's source. A 28-second recording at original speed, with no model calls.<br><a href="docs/assets/codeatlas-reading-en.gif">Watch the full demo</a> · <a href="docs/reading-example.en.md">Follow the walkthrough</a></p>
+<p align="center">Search → Annotate → Arrange → Export Markdown. A 40-second recording at original speed, with no model calls.<br>Starting with two saved stops, add the decorator to complete the route.<br><a href="docs/assets/codeatlas-workflow-en.gif">Watch the full demo</a> · <a href="docs/examples/click-workflow-route.en.md">Open the actual export</a> · <a href="docs/reading-example.en.md">Follow the walkthrough</a></p>
 
 ## From Finding Code to Explaining It
 

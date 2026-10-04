@@ -1,0 +1,11 @@
+{
+  "kind": "brand_illustration",
+  "generator": "Built-in image_gen",
+  "prompt": "Use case: ads-marketing.\nAsset type: GitHub repository social-preview cover for CodeAtlas, a local code-reading workspace that lets developers search source, save annotated reading routes and export Markdown.\nCreate a polished original BRAND ILLUSTRATION, not a product screenshot. Wide landscape 2:1 composition, ideally exactly 1280 by 640 pixels. Premium editorial graphic design: sharp clean typography, confident white negative space, charcoal ink, deep jade green and a restrained vivid coral accent. An elegant illustrated route crosses three folded source-code pages, using abstract short code strokes and bookmark tabs to connect reading with keeping a trail. Flat graphic print-like illustration with subtle depth; precise geometry, no visual clutter, no glowing effects.\nLarge exact brand text: \"CodeAtlas\". Supporting line, exact: \"Read the code. Keep the trail.\"\nSmall supporting line, exact: \"Search · Annotate · Export\".\nBrand name must be immediately readable at thumbnail size. Use a restrained sans serif, generous margins, keep all text at least 70 pixels from edges. An integrated editorial composition, not a boxed dashboard or a fake user interface.\nNo other text, no GitHub logo, no stars, no star counts, no badges, no testimonials, no AI robot, no mascots, no fake terminal, no real code, no purple gradients, no futuristic circuitry, no watermark. This is clearly a conceptual brand illustration, never evidence of application functionality.",
+  "asset": "docs/assets/codeatlas-social-preview.png",
+  "width": 1280,
+  "height": 640,
+  "bytes": 419806,
+  "processing": "Uniform downscale and PNG palette compression; no application screenshots or source code in this illustration.",
+  "github_upload_verified": false
+}

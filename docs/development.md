@@ -84,7 +84,20 @@ Linux 首次安装浏览器依赖可能需要 `npx playwright install --with-dep
 
 ## 实录复现
 
-先运行 `npm run demo`，在另一个终端执行：
+首页的 40 秒演示包含搜索、保存笔记、调整路线和下载 Markdown。先运行 `npm run demo`，在另一个终端执行：
+
+```sh
+node frontend/scripts/capture-reading-route.mjs --record
+python scripts/encode-recording.py --kind workflow
+node frontend/scripts/capture-reading-route.mjs --record --locale en
+python scripts/encode-recording.py --kind workflow
+```
+
+录制使用独立浏览器上下文，不读取已有的阅读路线。开拍前通过界面保存 Click 回调的两个位置；片中搜索装饰器、保存第三个位置，再上移两次，最后下载文件。实际下载的 Markdown、截图、帧和核对记录写入 `data/workflow-recording/<timestamp>`，失败也保留。发布的导出文件是 `docs/examples/click-workflow-route*.md`，没有手工改写导出内容。
+
+脚本核对固定提交、界面源码、摘录、顺序和导出链接，并验证刷新后仍能打开同一位置。GIF 是原速截图序列，没有生成界面或模型回答。手机和减少动态效果模式使用实拍静态图。发布素材的核对记录见 [workflow-demo.json](evidence/workflow-demo.json) 与 [workflow-demo-en.json](evidence/workflow-demo-en.json)。
+
+原有的 28 秒纯搜索演示仍保留，可以独立复现：
 
 ```sh
 node frontend/scripts/record-reading.mjs

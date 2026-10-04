@@ -16,12 +16,12 @@
 </p>
 
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-mobile.png">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-reading.png">
-  <img alt="CodeAtlas 真实工作台：搜索 Click 的 callback=f，打开匹配源码，沿行号阅读回调的保存与执行" src="docs/assets/codeatlas-reading.gif">
+  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-workflow-mobile.png">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-workflow.png">
+  <img alt="CodeAtlas 真实工作台：搜索 Click 源码，保存摘录和笔记，调整阅读顺序，导出 Markdown" src="docs/assets/codeatlas-workflow.gif">
 </picture>
 
-<p align="center">在 Click 中搜索、定位、核对源码。28 秒原速实录，无模型调用。<br><a href="docs/assets/codeatlas-reading.gif">播放完整演示</a> · <a href="docs/reading-example.md">跟着案例读一遍</a></p>
+<p align="center">搜索 → 保存笔记 → 整理路线 → 导出 Markdown。40 秒原速实录，无模型调用。<br>从已保存的两个位置继续，补上装饰器这一站。<br><a href="docs/assets/codeatlas-workflow.gif">播放完整演示</a> · <a href="docs/examples/click-workflow-route.md">打开本次导出的笔记</a> · <a href="docs/reading-example.md">跟着案例读一遍</a></p>
 
 ## 从找到代码，到讲清代码
 
