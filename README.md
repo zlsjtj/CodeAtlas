@@ -10,18 +10,44 @@
 
 <p align="center">
   <a href="#快速开始">快速开始</a> ·
-  <a href="docs/examples/click-reading-route.md">看看导出的阅读路线</a> ·
+  <a href="docs/examples/click-showcase-route.md">看看导出的笔记</a> ·
   <a href="docs/development.md">文档</a> ·
   <a href="README.en.md">English</a>
 </p>
 
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-workflow-mobile.png">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-workflow.png">
-  <img alt="CodeAtlas 真实工作台：搜索 Click 源码，保存摘录和笔记，调整阅读顺序，导出 Markdown" src="docs/assets/codeatlas-workflow.gif">
+  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-showcase-mobile.png">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-showcase.png">
+  <img alt="CodeAtlas 真实工作台：一条带标题和笔记的 Click 阅读路线，以及搜索、保存与导出过程" src="docs/assets/codeatlas-showcase.gif">
 </picture>
 
-<p align="center">搜索 → 保存笔记 → 整理路线 → 导出 Markdown。40 秒原速实录，无模型调用。<br>从已保存的两个位置继续，补上装饰器这一站。<br><a href="docs/assets/codeatlas-workflow.gif">播放完整演示</a> · <a href="docs/examples/click-workflow-route.md">打开本次导出的笔记</a> · <a href="docs/reading-example.md">跟着案例读一遍</a></p>
+<p align="center">先看成果，再看怎么做。约 14 秒真实操作剪辑，部分 2 倍速，无模型调用。<br><a href="docs/assets/codeatlas-showcase-full.gif">40 秒完整实录</a> · <a href="docs/examples/click-showcase-route.md">打开本次导出的笔记</a> · <a href="docs/reading-example.md">跟着案例读一遍</a></p>
+
+## 一次阅读，一份能带走的笔记
+
+**Click 的 `@command()` 怎样把函数变成命令？** 从两个文件里找到三个位置，整理后就有了下面这条阅读路线。
+
+1. **创建命令** · [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248)
+
+   `cmd = cls(name=cmd_name, callback=f, params=params, **attrs)`
+
+   装饰器把原函数作为 callback 交给命令对象。
+
+2. **保存回调** · [`core.py:1090`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090)
+
+   `self.callback = callback`
+
+   `Command` 把 callback 保存到实例，供执行时使用。
+
+3. **执行回调** · [`core.py:1442`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442)
+
+   `return ctx.invoke(self.callback, **ctx.params)`
+
+   执行命令时，把解析后的参数交给 callback。
+
+**[打开工作台实际导出的 Markdown →](docs/examples/click-showcase-route.md)**
+
+这里是笔记节选；导出文件保留完整选中片段、笔记和固定提交链接，保存时间与文件哈希收在“来源与版本”中。可以直接在 GitHub 上阅读，也可以用同样的方式整理自己的仓库。
 
 ## 从找到代码，到讲清代码
 
@@ -64,32 +90,6 @@ docker compose up --build --wait
 </details>
 
 [启动、端口与数据目录](docs/development.md) · [版本记录](https://github.com/zlsjtj/CodeAtlas/releases)
-
-## 一次阅读，一份能带走的笔记
-
-**Click 的 `@command()` 怎样把函数变成命令？**
-
-沿着源码找到三个位置，就能把“创建命令、保存回调、执行回调”整理成一条路线：
-
-1. [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248)：装饰器把原函数作为 callback 交给命令对象。
-2. [`core.py:1090`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090)：`Command` 把 callback 保存到实例。
-3. [`core.py:1442`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442)：执行命令时，把解析后的参数交给 callback。
-
-**[打开工作台实际导出的 Markdown →](docs/examples/click-reading-route.md)**
-
-这份笔记包含三处源码摘录、阅读注释和固定提交链接，可以直接在 GitHub 上阅读。你也可以用同样的方式整理自己的仓库。
-
-<details>
-<summary><strong>查看阅读路线工作台</strong></summary>
-
-<picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-route-mobile.png">
-  <img alt="CodeAtlas 阅读路线：三处 Click 源码、逐条笔记、版本来源与导出 Markdown 操作" src="docs/assets/codeatlas-route.png">
-</picture>
-
-[完整案例与复现步骤](docs/reading-example.md) · [源码核对记录](docs/evidence/reading-route.json)
-
-</details>
 
 ## 需要时，接上模型一起读
 

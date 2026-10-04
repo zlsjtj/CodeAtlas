@@ -8,8 +8,10 @@ import { clickExample, indexExample, prepareExample } from "../../scripts/demo.m
 
 const { values } = parseArgs({ options: {
   locale: { type: "string", default: "zh-CN" }, record: { type: "boolean", default: false },
+  showcase: { type: "boolean", default: false },
 } });
-const record = values.record;
+const showcase = values.showcase;
+const record = values.record || showcase;
 const locale = values.locale;
 if (!["zh-CN", "en"].includes(locale)) throw new Error("Supported locales: zh-CN, en");
 const en = locale === "en";
@@ -17,29 +19,32 @@ const labels = en ? {
   repository: "Current repository", search: "Search code", save: "Save to reading route", dialog: "Save reading stop",
   start: "Start line", end: "End line", note: "Note", submit: "Save stop", route: "Route", title: "Route title",
   saveTitle: "Save title", excerpt: "Saved excerpt", download: "Export Markdown",
-  sameHash: "Current workspace file matches the saved file hash.", moveUp: "Move up",
+  sameHash: "Current workspace file matches the saved file hash.", moveUp: "Move up", stopTitle: "Stop title (optional)",
 } : {
   repository: "当前仓库", search: "搜索代码", save: "保存到阅读路线", dialog: "保存阅读位置",
   start: "起始行", end: "结束行", note: "笔记", submit: "保存位置", route: "路线", title: "路线标题",
-  saveTitle: "保存标题", excerpt: "保存时摘录", download: "导出 Markdown", sameHash: "当前工作区文件与保存时的文件哈希一致。", moveUp: "上移",
+  saveTitle: "保存标题", excerpt: "保存时摘录", download: "导出 Markdown", sameHash: "当前工作区文件与保存时的文件哈希一致。", moveUp: "上移", stopTitle: "位置标题（可选）",
 };
 const root = path.resolve(import.meta.dirname, "../..");
 const web = process.env.DEMO_WEB_URL ?? "http://127.0.0.1:3000";
 const api = process.env.DEMO_API_URL ?? "http://127.0.0.1:8000";
-const recordingRoot = path.join(root, record ? "data/workflow-recording" : "data/reading-route-capture");
+const recordingRoot = path.join(root, showcase ? "data/showcase-recording" : record ? "data/workflow-recording" : "data/reading-route-capture");
 const folder = path.join(recordingRoot, new Date().toISOString().replace(/[:.]/g, "-") + "-" + locale);
 mkdirSync(folder, { recursive: true });
 const output = path.join(folder, "click-reading-route.md");
 const pin = clickExample.commit;
-const viewport = { width: record ? 1080 : 1120, height: record ? 800 : 1100 };
+const viewport = showcase ? { width: 960, height: 820 } : { width: record ? 1080 : 1120, height: record ? 800 : 1100 };
 const mobileViewport = { width: 390, height: 844 };
 const title = en ? "Click: from decorator to callback" : "Click：从装饰器到回调执行";
 const stops = [
   { query: "callback=f", path: "src/click/decorators.py", start: 248, end: 250,
+    title: en ? "Create the command" : "创建命令",
     note: en ? "The decorator passes the original function as callback, then returns the command." : "装饰器把原函数作为 callback 交给命令对象，再返回这个命令。" },
   { query: "self.callback = callback", path: "src/click/core.py", start: 1090, end: 1090,
+    title: en ? "Keep the callback" : "保存回调",
     note: en ? "Command stores the callback on the instance." : "Command 将 callback 保存在实例中。" },
   { query: "ctx.invoke(self.callback", path: "src/click/core.py", start: 1441, end: 1442,
+    title: en ? "Invoke the callback" : "执行回调",
     note: en ? "Command execution passes parsed parameters to the callback." : "执行命令时，将解析后的参数交给 callback。" },
 ];
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
@@ -122,6 +127,7 @@ try {
     await at(10);
     await dialog.getByLabel(labels.start).fill(String(stop.start));
     await dialog.getByLabel(labels.end).fill(String(stop.end));
+    await dialog.getByLabel(labels.stopTitle).fill(stop.title);
     const note = dialog.getByRole("textbox", { name: labels.note, exact: true });
     if (record && started) await note.pressSequentially(stop.note, { delay: 35 });
     else await note.fill(stop.note);
@@ -151,7 +157,7 @@ try {
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(key => key.startsWith("codeatlas:reading-route:")))));
   for (let index = 0; index < evidence.length; index++) {
     expect(saved.entries[index].excerpt).toBe(evidence[index].excerpt);
-    if (!record || index === 0) {
+    if (!record || (!showcase && index === 0)) {
       await at(26 + index);
       await entries.nth(index).getByText(labels.excerpt, { exact: true }).click();
     }
@@ -165,6 +171,7 @@ try {
   await (await download).saveAs(output);
   const exported = readFileSync(output, "utf8");
   for (const stop of evidence) {
+    expect(exported).toContain(stop.title);
     expect(exported).toContain(stop.excerpt);
     expect(exported).toContain(`${stop.provenance.file_url}#L${stop.start}-L${stop.end}`);
   }
@@ -195,8 +202,8 @@ try {
   writeFileSync(path.join(folder, "receipt.json"), JSON.stringify(receipt, null, 2) + "\n");
   mkdirSync(path.join(root, "docs/examples"), { recursive: true });
   const suffix = en ? "-en" : "";
-  const name = record ? "workflow" : "reading";
-  const asset = record ? "workflow" : "route";
+  const name = showcase ? "showcase" : record ? "workflow" : "reading";
+  const asset = showcase ? "showcase" : record ? "workflow" : "route";
   copyFileSync(output, path.join(root, `docs/examples/click-${name}-route${en ? ".en" : ""}.md`));
   copyFileSync(path.join(folder, "desktop.png"), path.join(root, `docs/assets/codeatlas-${asset}${suffix}.png`));
   copyFileSync(path.join(folder, "mobile.png"), path.join(root, `docs/assets/codeatlas-${asset}${suffix}-mobile.png`));
@@ -204,7 +211,9 @@ try {
     writeFileSync(path.join(folder, "recording.json"), JSON.stringify({ ...receipt, duration_ms: duration,
       frames, mocked_responses: false, speed: "original",
       initial_state: "Click indexed; callback storage and invocation stops saved through the UI before recording",
-      sequence: "Search decorator, read source, save excerpt and note, reorder three stops, name route, expand first excerpt, download Markdown",
+      sequence: showcase
+        ? "Search decorator, read source, save title and note, reorder three stops, name route, download Markdown"
+        : "Search decorator, read source, save excerpt and note, reorder three stops, name route, expand first excerpt, download Markdown",
     }, null, 2) + "\n");
     writeFileSync(path.join(recordingRoot, "latest.json"), JSON.stringify({ directory: path.basename(folder) }));
   } else copyFileSync(path.join(folder, "receipt.json"), path.join(root, `docs/evidence/reading-route${suffix}.json`));

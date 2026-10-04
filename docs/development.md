@@ -84,7 +84,18 @@ Linux 首次安装浏览器依赖可能需要 `npx playwright install --with-dep
 
 ## 实录复现
 
-首页的 40 秒演示包含搜索、保存笔记、调整路线和下载 Markdown。先运行 `npm run demo`，在另一个终端执行：
+首页现在使用约 14 秒的节选：先展示完成的路线，再回放搜索、添加标题与笔记、调整顺序和导出。部分片段为 2 倍速，页面已标注；同一次录制的 40 秒完整原速版也可以打开。先启动 `npm run demo`，然后执行：
+
+```sh
+node frontend/scripts/capture-reading-route.mjs --showcase
+python scripts/encode-recording.py --kind showcase
+node frontend/scripts/capture-reading-route.mjs --showcase --locale en
+python scripts/encode-recording.py --kind showcase
+```
+
+素材分别输出到 `docs/assets/codeatlas-showcase*` 和 `docs/examples/click-showcase-route*`。实际下载的 Markdown 没有手工改写。原始帧与失败记录保存在 `data/showcase-recording/<timestamp>`；[中文记录](evidence/showcase-demo.json)和[英文记录](evidence/showcase-demo-en.json)包含剪辑时间段、倍速、完整实录哈希、源码与下载核对结果。画面来自工作台，不生成界面、不替换源码。下列旧版素材继续保留。
+
+此前的 40 秒演示包含搜索、保存笔记、调整路线和下载 Markdown。先运行 `npm run demo`，在另一个终端执行：
 
 ```sh
 node frontend/scripts/capture-reading-route.mjs --record

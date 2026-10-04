@@ -30,7 +30,7 @@ test("route data validates ranges and exports literal notes with a safe code fen
   expect(parseReadingRoute(JSON.stringify(route))).toEqual(route);
   const text = exportReadingRoute(route, "repo", "en");
   expect(text).toContain("#L11-L12");
-  expect(text).toContain("`````\n````\nthree\n`````");
+  expect(text).toContain("`````python\n````\nthree\n`````");
   expect(text).not.toContain("<img");
   expect(text).not.toContain("\n# not a heading");
   expect(text).not.toContain("[not a link](");
@@ -44,6 +44,42 @@ test("route data validates ranges and exports literal notes with a safe code fen
   const localExport = exportReadingRoute({ ...route, entries: [local] }, "repo", "en");
   expect(localExport).not.toContain("](https://github.com/");
   expect(localExport).toContain("HEAD at read time (not an exact source version)");
+});
+
+test("exports put notes first, retain provenance, and accept routes without stop titles", () => {
+  const stop = makeReadingStop(source, 10, 10, "A short explanation", "  Create the command  ");
+  const route: ReadingRoute = { version: 1, title: "Follow a callback", entries: [stop] };
+  const english = exportReadingRoute(route, "Click", "en");
+  expect(english).toContain("## 1. Create the command");
+  expect(english).toContain("[src/main\\.py:10](");
+  expect(english).toContain("```python\none\n```");
+  expect(english.indexOf("A short explanation")).toBeLessThan(english.indexOf("```python"));
+  expect(english.indexOf("```python")).toBeLessThan(english.indexOf("<summary>Source and version</summary>"));
+  expect(english).toContain(`- Saved: ${stop.savedAt}`);
+  expect(english).toContain(`- File SHA-256: \`${stop.provenance.content_sha256}\``);
+  expect(english).toContain(`- Commit: \`${sha}\``);
+  expect(english).toContain("not a live workspace view");
+  expect(english).toContain("remote availability and access permissions have not been checked");
+  const chinese = exportReadingRoute(route, "Click", "zh-CN");
+  expect(chinese).toContain("<summary>来源与版本</summary>");
+  expect(chinese).toContain("不随当前工作区变化");
+  const legacy = { ...stop };
+  delete legacy.title;
+  const oldRoute = parseReadingRoute(JSON.stringify({ ...route, entries: [legacy] }));
+  expect(exportReadingRoute(oldRoute, "Click", "en")).toContain("## 1. src/main\\.py:10");
+  for (const title of [42, "x".repeat(121), "one\ntwo"]) {
+    expect(() => parseReadingRoute(JSON.stringify({ ...route, entries: [{ ...stop, title }] }))).toThrow();
+  }
+  const hostile = { ...stop, title: "</summary><script>alert(1)</script>", note: "</details>\n# injected" };
+  const escaped = exportReadingRoute({ ...route, entries: [hostile] }, "repo\n# injected", "en");
+  expect(escaped).not.toContain("<script>");
+  expect(escaped.match(/<\/details>/g)).toHaveLength(2);
+  expect(escaped).not.toContain("\n# injected");
+  for (const state of ["modified", "local", "unknown"] as const) {
+    const local = exportReadingRoute({ ...route, entries: [{ ...stop, provenance: { ...stop.provenance, state, file_url: null } }] }, "repo", "en");
+    expect(local).not.toContain("](https://github.com/");
+    expect(local.split("<details>")[0]).toMatch(/Modified or untracked file|Local file, no Git revision|Revision unverified/);
+  }
 });
 
 async function fixture(request: APIRequestContext, name: string, useGit = true) {
@@ -74,12 +110,13 @@ async function select(page: Page, id: number) {
   await page.getByLabel("当前仓库").selectOption(String(id));
 }
 
-async function addStop(page: Page, start: number, end: number, note: string) {
+async function addStop(page: Page, start: number, end: number, note: string, title = "") {
   await page.getByRole("button", { name: "保存到阅读路线", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "保存阅读位置" });
   await dialog.getByLabel("起始行").fill(String(start));
   await dialog.getByLabel("结束行").fill(String(end));
   await dialog.getByLabel("笔记", { exact: true }).fill(note);
+  await dialog.getByLabel("位置标题（可选）", { exact: true }).fill(title);
   await dialog.getByRole("button", { name: "保存位置", exact: true }).click();
 }
 
@@ -88,7 +125,7 @@ test("save, reorder, edit, reload and export a pinned route without a model", as
   const other = await fixture(request, "route-other", false);
   await select(page, repo.id);
   await page.getByRole("button", { name: "main.py", exact: true }).click();
-  await addStop(page, 1, 2, "First: greeting");
+  await addStop(page, 1, 2, "First: greeting", "Greeting function");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await addStop(page, 4, 5, "Second: call");
   await addStop(page, 7, 7, "Third: entry");
@@ -101,6 +138,7 @@ test("save, reorder, edit, reload and export a pinned route without a model", as
   await expect(stops.nth(1)).toContainText("Third: entry");
   await stops.nth(1).getByRole("button", { name: "编辑笔记" }).click();
   await stops.nth(1).getByRole("textbox", { name: "笔记", exact: true }).fill("The entry calls run");
+  await stops.nth(1).getByLabel("位置标题（可选）").fill("Program entry");
   await stops.nth(1).getByRole("button", { name: "保存笔记" }).click();
   await stops.nth(2).getByRole("button", { name: "移除位置" }).click();
   await expect(stops).toHaveCount(2);
@@ -116,6 +154,7 @@ test("save, reorder, edit, reload and export a pinned route without a model", as
   await page.getByRole("button", { name: "路线", exact: true }).click();
   await expect(page.getByLabel("路线标题")).toHaveValue("Follow the greeting");
   await expect(stops.nth(1)).toContainText("The entry calls run");
+  await expect(stops.nth(1).getByRole("heading", { name: "Program entry" })).toBeVisible();
   const pending = page.waitForEvent("download");
   await page.getByRole("button", { name: "导出 Markdown" }).click();
   const download = await pending;
@@ -123,6 +162,8 @@ test("save, reorder, edit, reload and export a pinned route without a model", as
   expect(markdown).toContain(`https://github.com/example/reading-route/blob/${repo.revision}/main.py#L1-L2`);
   expect(markdown.indexOf("The entry calls run")).toBeLessThan(markdown.indexOf("Second: call"));
   expect(markdown).not.toContain(repo.root);
+  expect(markdown).toContain("## 1. Greeting function");
+  expect(markdown).toContain("## 2. Program entry");
   await page.screenshot({ path: "test-results/reading-route-desktop.png", fullPage: true });
   writeFileSync(path.join(repo.root, "main.py"), repo.content.replace("hello", "welcome"));
   await stops.first().getByRole("button", { name: "main.py:1–2", exact: true }).click();
@@ -147,7 +188,7 @@ test("mobile route, duplicate detection, local snapshots and English export", as
   await expect(page.getByRole("dialog", { name: "保存阅读位置" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "保存到阅读路线" })).toBeFocused();
-  await addStop(page, 1, 2, "Local note");
+  await addStop(page, 1, 2, "Local note", "VeryLongUnbrokenTitle".repeat(6));
   await addStop(page, 1, 2, "Duplicate");
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("已在路线中");
   await page.keyboard.press("Escape");

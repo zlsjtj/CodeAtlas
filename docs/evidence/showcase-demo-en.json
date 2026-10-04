@@ -1,0 +1,131 @@
+{
+  "recorded_at": "2026-10-04T16:47:29.091Z",
+  "platform": "win32",
+  "browser": "153.0.8010.12",
+  "locale": "en",
+  "viewport": {
+    "width": 960,
+    "height": 820
+  },
+  "mobile_viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "codeatlas": {
+    "base_commit": "7caa298acdd2603dc3bf6cc2ae6ed5ee79ffb37a",
+    "working_tree_dirty": true,
+    "source_sha256": {
+      "backend/app/services/source_provenance.py": "8cf064fec640418c98f273c598a0a2fa85434c6a423c383e30bcc8aa7da866d5",
+      "backend/app/services/retrieval_service.py": "215ce4df00d10d981d5b01194c796655a3d71a724aa24df529ee4167717f3e94",
+      "frontend/components/reader/reading-route.tsx": "6ffcd1d73bb638f3b44b0ae53768750f153b96bc3c1df2056df0eafd85a1568b",
+      "frontend/lib/reading-route.ts": "30250fa1137098d30a30f9996b3b836eec47d3086b4bf7b812648d230a22f753",
+      "frontend/lib/hooks/use-reading-route.ts": "fb335469b1393caa45f136c7c45d7aea8872b7465974ba768e0ad52787a14111",
+      "frontend/scripts/capture-reading-route.mjs": "1ec2ec62a0ee8a79d8e1b0402455401746b5af8a02b4cb13dd20b4b6f405c335"
+    }
+  },
+  "click_commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+  "model_requests": 0,
+  "excerpts_match_checkout": true,
+  "refresh_restores_stops": true,
+  "source_reopen_matches_hash": true,
+  "remote_link_availability_checked": false,
+  "evidence": [
+    {
+      "query": "callback=f",
+      "path": "src/click/decorators.py",
+      "start": 248,
+      "end": 250,
+      "title": "Create the command",
+      "note": "The decorator passes the original function as callback, then returns the command.",
+      "excerpt": "        cmd = cls(name=cmd_name, callback=f, params=params, **attrs)\n        cmd.__doc__ = f.__doc__\n        return cmd",
+      "provenance": {
+        "content_sha256": "16069357615691fcdfc9c794bb515f6009eb35aad6f7a76c017bdce06dae8d55",
+        "state": "commit",
+        "revision": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+        "file_url": "https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py"
+      }
+    },
+    {
+      "query": "self.callback = callback",
+      "path": "src/click/core.py",
+      "start": 1090,
+      "end": 1090,
+      "title": "Keep the callback",
+      "note": "Command stores the callback on the instance.",
+      "excerpt": "        self.callback = callback",
+      "provenance": {
+        "content_sha256": "53df54afb5deba7fd7c3a968a2a6284fc2d9dd3892e6939dfbb3092ca3fbca0f",
+        "state": "commit",
+        "revision": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+        "file_url": "https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py"
+      }
+    },
+    {
+      "query": "ctx.invoke(self.callback",
+      "path": "src/click/core.py",
+      "start": 1441,
+      "end": 1442,
+      "title": "Invoke the callback",
+      "note": "Command execution passes parsed parameters to the callback.",
+      "excerpt": "        if self.callback is not None:\n            return ctx.invoke(self.callback, **ctx.params)",
+      "provenance": {
+        "content_sha256": "53df54afb5deba7fd7c3a968a2a6284fc2d9dd3892e6939dfbb3092ca3fbca0f",
+        "state": "commit",
+        "revision": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+        "file_url": "https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py"
+      }
+    }
+  ],
+  "artifact_sha256": {
+    "desktop.png": "ca9adab04eb0b742d6c6301c56ec48005ff9ae71d7ddd4dff25f6bc085e4e51c",
+    "mobile.png": "8ec664fcf3964e173d30eb76f57f3d2deb6dd04f682bd133d743f55d3c493072",
+    "click-reading-route.md": "855f5da2897cc8c7c09262748c4227585aa52aa7d2a6944a64628230b8de8ae2"
+  },
+  "duration_ms": 40079,
+  "mocked_responses": false,
+  "speed": "mixed; see segments",
+  "initial_state": "Click indexed; callback storage and invocation stops saved through the UI before recording",
+  "sequence": "Search decorator, read source, save title and note, reorder three stops, name route, download Markdown",
+  "captured_frames": 180,
+  "full_recording": {
+    "file": "codeatlas-showcase-full-en.gif",
+    "duration_ms": 39900,
+    "sha256": "7d969b184820974ce01af13ef72faf4fa9f923eea3c4e5ffde2f7c7954c283fa",
+    "speed": "original"
+  },
+  "edited": true,
+  "segments": [
+    {
+      "start_ms": 30000,
+      "end_ms": 33000,
+      "speed": 1,
+      "step": "finished route"
+    },
+    {
+      "start_ms": 1000,
+      "end_ms": 6000,
+      "speed": 2,
+      "step": "search and open source"
+    },
+    {
+      "start_ms": 10000,
+      "end_ms": 16000,
+      "speed": 2,
+      "step": "title, note and save"
+    },
+    {
+      "start_ms": 18000,
+      "end_ms": 24000,
+      "speed": 2,
+      "step": "reorder stops"
+    },
+    {
+      "start_ms": 33000,
+      "end_ms": 35000,
+      "speed": 1,
+      "step": "download Markdown"
+    }
+  ],
+  "gif_duration_ms": 13630,
+  "gif_sha256": "8df9859d45cf24e48e37e745ac522e3a986e2e15132ded99ca2d0ee9f88b8ef5"
+}

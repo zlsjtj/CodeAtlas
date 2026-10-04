@@ -10,18 +10,44 @@
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
-  <a href="docs/examples/click-reading-route.en.md">Export example</a> ·
+  <a href="docs/examples/click-showcase-route.en.md">Export example</a> ·
   <a href="docs/development.md">Docs</a> ·
   <a href="README.md">中文</a>
 </p>
 
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-workflow-en-mobile.png">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-workflow-en.png">
-  <img alt="CodeAtlas in use: search Click's source, save an excerpt and note, reorder the reading route, and export Markdown" src="docs/assets/codeatlas-workflow-en.gif">
+  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-showcase-en-mobile.png">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-showcase-en.png">
+  <img alt="CodeAtlas in use: a titled, annotated Click reading route, followed by search, save, and export" src="docs/assets/codeatlas-showcase-en.gif">
 </picture>
 
-<p align="center">Search → Annotate → Arrange → Export Markdown. A 40-second recording at original speed, with no model calls.<br>Starting with two saved stops, add the decorator to complete the route.<br><a href="docs/assets/codeatlas-workflow-en.gif">Watch the full demo</a> · <a href="docs/examples/click-workflow-route.en.md">Open the actual export</a> · <a href="docs/reading-example.en.md">Follow the walkthrough</a></p>
+<p align="center">The result, then the workflow. About 14 seconds of real actions, edited with some sections at 2× speed. No model calls.<br><a href="docs/assets/codeatlas-showcase-full-en.gif">Full 40-second recording</a> · <a href="docs/examples/click-showcase-route.en.md">Open the actual export</a> · <a href="docs/reading-example.en.md">Follow the walkthrough</a></p>
+
+## A Walkthrough You Can Take With You
+
+**How does Click's `@command()` turn a function into a command?** Three locations in two files become a reading route:
+
+1. **Create the command** · [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248)
+
+   `cmd = cls(name=cmd_name, callback=f, params=params, **attrs)`
+
+   The decorator passes the original function to the command as its callback.
+
+2. **Keep the callback** · [`core.py:1090`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090)
+
+   `self.callback = callback`
+
+   `Command` stores the callback on the instance for later execution.
+
+3. **Invoke the callback** · [`core.py:1442`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442)
+
+   `return ctx.invoke(self.callback, **ctx.params)`
+
+   Command execution passes the parsed parameters to that callback.
+
+**[Read the actual Markdown export →](docs/examples/click-showcase-route.en.md)**
+
+These are highlights from the notes. The export keeps the full selected excerpts, notes, and commit-pinned links, with timestamps and file hashes under “Source and version.” Read it directly on GitHub, or use the same workflow for your own repository.
 
 ## From Finding Code to Explaining It
 
@@ -64,32 +90,6 @@ Local source requires an [explicit mount](docs/development.md#docker-挂载与�
 </details>
 
 [Setup, ports, and data directories](docs/development.md) · [Releases](https://github.com/zlsjtj/CodeAtlas/releases)
-
-## A Walkthrough You Can Take With You
-
-**How does Click's `@command()` turn a function into a command?**
-
-Follow three source locations, then save a route from command creation to callback execution:
-
-1. [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248): the decorator passes the original function to the command as its callback.
-2. [`core.py:1090`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090): `Command` stores the callback on the instance.
-3. [`core.py:1442`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442): command execution passes the parsed parameters to that callback.
-
-**[Read the actual Markdown export →](docs/examples/click-reading-route.en.md)**
-
-It contains three source excerpts, reading notes, and commit-pinned links, ready to read on GitHub. Use the same workflow to document your own repository.
-
-<details>
-<summary><strong>See the reading route workspace</strong></summary>
-
-<picture>
-  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-route-en-mobile.png">
-  <img alt="CodeAtlas reading route with three Click source excerpts, notes, version provenance, and the Markdown export action" src="docs/assets/codeatlas-route-en.png">
-</picture>
-
-[Full walkthrough and reproduction steps](docs/reading-example.en.md) · [Source checks](docs/evidence/reading-route-en.json)
-
-</details>
 
 ## Add a Model When You Need One
 

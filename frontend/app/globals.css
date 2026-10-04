@@ -174,6 +174,7 @@ pre { overflow: auto; }
 .reading-route-list > li { padding: 14px 0; border-bottom: 1px solid var(--line); }
 .reading-route-list > li::marker { color: var(--muted); font-size: 12px; }
 .route-stop-header { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+.route-stop-title { margin: 0 0 6px; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
 .route-source-link { overflow-wrap: anywhere; min-width: 0; font: 13px/1.6 var(--font-mono); text-align: left; flex: 1 1 200px; justify-content: flex-start; }
 .route-stop-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .route-stop-actions .icon-button { width: 30px; height: 30px; }

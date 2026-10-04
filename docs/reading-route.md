@@ -5,9 +5,11 @@
 ## 用一次
 
 1. 打开源码，点击行号范围旁的书签加号。
-2. 选择当前已加载片段中的起止行，写一句笔记，保存。
+2. 选择当前已加载片段中的起止行，可以起一个简短的位置标题，再写笔记、保存。
 3. 在“路线”中调整顺序、修改标题和笔记，或移除位置。最近一次移除可以撤销。
-4. 导出 Markdown，得到按顺序排列的源码摘录、笔记、行号、文件哈希和来源信息。
+4. 导出 Markdown，得到按顺序排列的标题、笔记和带语法标记的源码摘录。文件位置保留在每节开头，保存时间、文件哈希和完整版本放在“来源与版本”折叠区。
+
+位置标题是可选的，最多 120 字符；未填写时，导出小标题仍使用文件位置。已有路线可以直接打开，不需要迁移。新版排版见[实际导出的笔记](examples/click-showcase-route.md)。
 
 以 Click 案例为例，可以保存 `decorators.py:248`、`core.py:1090` 和 `core.py:1442`，分别记下创建命令、保存回调、执行回调。文件中的完整路径和固定输入见[阅读案例](reading-example.md)。这些位置要由读者选择，不会自动推导成调用图。
 
@@ -39,6 +41,8 @@
 ## English
 
 Available from `v0.1.0-preview.3`. Save a loaded source range with the bookmark-plus button, then open Route to edit notes, reorder stops or export Markdown. There are no model calls or repository writes.
+
+Stops can have an optional title of up to 120 characters. Exports lead with the title, source location, note and code; timestamps, hashes and revision details remain under “Source and version.” Stops without titles, including older saved routes, use the file location as their heading. See the [current export format](examples/click-showcase-route.en.md).
 
 See the [actual Click export](examples/click-reading-route.en.md) and [capture steps](reading-example.en.md#keep-the-reading-route) for a complete three-stop example.
 

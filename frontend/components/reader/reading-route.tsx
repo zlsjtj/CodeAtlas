@@ -6,7 +6,7 @@ import type { ToolResultItem } from "@/lib/types";
 import type { WorkspaceLocale } from "@/lib/workspace-i18n";
 import type { SourceTarget } from "@/lib/hooks/use-repository-reader";
 import type { RouteError, useReadingRoute } from "@/lib/hooks/use-reading-route";
-import { exportReadingRoute, makeReadingStop, MAX_NOTE_LENGTH, MAX_ROUTE_ENTRIES, provenanceLabel } from "@/lib/reading-route";
+import { exportReadingRoute, makeReadingStop, MAX_NOTE_LENGTH, MAX_ROUTE_ENTRIES, MAX_STOP_TITLE_LENGTH, provenanceLabel } from "@/lib/reading-route";
 
 type Route = ReturnType<typeof useReadingRoute>;
 
@@ -29,6 +29,7 @@ export function SaveReadingStop({ source, route, locale, onClose, onSaved }: {
   const [start, setStart] = useState(String(source.start_line ?? 1));
   const [end, setEnd] = useState(String(source.start_line ?? 1));
   const [note, setNote] = useState("");
+  const [title, setTitle] = useState("");
   const [invalid, setInvalid] = useState(false);
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -46,7 +47,7 @@ export function SaveReadingStop({ source, route, locale, onClose, onSaved }: {
       event.preventDefault();
       setInvalid(false);
       try {
-        if (route.add(makeReadingStop(source, Number(start), Number(end), note))) { onSaved(); onClose(); }
+        if (route.add(makeReadingStop(source, Number(start), Number(end), note, title))) { onSaved(); onClose(); }
       } catch { setInvalid(true); }
     }}>
       <div className="route-line-range">
@@ -54,6 +55,7 @@ export function SaveReadingStop({ source, route, locale, onClose, onSaved }: {
           onChange={event => { setStart(event.target.value); if (Number(event.target.value) > Number(end)) setEnd(event.target.value); }} /></label>
         <label className="field-label">{en ? "End line" : "结束行"}<input type="number" min={Number(start) || 1} max={source.end_line ?? 1} step={1} required value={end} onChange={event => setEnd(event.target.value)} /></label>
       </div>
+      <label className="field-label">{en ? "Stop title (optional)" : "位置标题（可选）"}<input maxLength={MAX_STOP_TITLE_LENGTH} value={title} onChange={event => setTitle(event.target.value)} /></label>
       <label className="field-label">{en ? "Note" : "笔记"}<textarea rows={4} maxLength={MAX_NOTE_LENGTH} value={note} onChange={event => setNote(event.target.value)} /></label>
       {invalid ? <p className="inline-error" role="alert">{en ? "Select a valid range within the loaded source." : "请选择当前已读取源码内的有效行范围。"}</p> : null}
       {error ? <p className="inline-error" role="alert">{error}</p> : null}
@@ -69,6 +71,7 @@ export function ReadingRoutePanel({ route, repositoryName, locale, onOpenSource 
   const en = locale === "en";
   const [title, setTitle] = useState(route.route.title);
   const [editing, setEditing] = useState<string | null>(null);
+  const [stopTitle, setStopTitle] = useState("");
   const [note, setNote] = useState("");
   useEffect(() => { setTitle(route.route.title); }, [route.route.title]);
   const error = errorMessage(route.error, en);
@@ -94,17 +97,19 @@ export function ReadingRoutePanel({ route, repositoryName, locale, onOpenSource 
     {route.removed ? <div className="route-undo" role="status"><span>{en ? "Stop removed" : "位置已移除"}</span><button className="icon-button" aria-label={en ? "Undo removal" : "撤销移除"} title={en ? "Undo removal" : "撤销移除"} onClick={route.undoRemove}><Undo2 size={16} /></button></div> : null}
     {route.loaded && !route.route.entries.length ? <p className="empty-state">{en ? "No saved stops." : "尚未保存阅读位置。"}</p> : null}
     <ol className="reading-route-list">{route.route.entries.map((stop, index) => <li key={stop.id}>
+      {stop.title ? <h3 className="route-stop-title">{stop.title}</h3> : null}
       <div className="route-stop-header"><button className="citation-link route-source-link" title={en ? "Open current workspace source" : "打开当前工作区源码"}
         onClick={() => onOpenSource({ path: stop.path, line: stop.startLine, endLine: stop.endLine, savedHash: stop.provenance.content_sha256 })}>
         {stop.path}:{stop.startLine}–{stop.endLine}</button>
         <div className="route-stop-actions">
           <button className="icon-button" title={en ? "Move up" : "上移"} aria-label={en ? "Move up" : "上移"} disabled={index === 0} onClick={() => route.move(stop.id, -1)}><ArrowUp size={16} /></button>
           <button className="icon-button" title={en ? "Move down" : "下移"} aria-label={en ? "Move down" : "下移"} disabled={index === route.route.entries.length - 1} onClick={() => route.move(stop.id, 1)}><ArrowDown size={16} /></button>
-          <button className="icon-button" title={en ? "Edit note" : "编辑笔记"} aria-label={en ? "Edit note" : "编辑笔记"} onClick={() => { setEditing(stop.id); setNote(stop.note); }}><Pencil size={16} /></button>
+          <button className="icon-button" title={en ? "Edit note" : "编辑笔记"} aria-label={en ? "Edit note" : "编辑笔记"} onClick={() => { setEditing(stop.id); setNote(stop.note); setStopTitle(stop.title ?? ""); }}><Pencil size={16} /></button>
           <button className="icon-button" title={en ? "Remove stop" : "移除位置"} aria-label={en ? "Remove stop" : "移除位置"} onClick={() => route.remove(stop.id)}><Trash2 size={16} /></button>
         </div></div>
       <p className="muted route-provenance">{provenanceLabel(stop.provenance, locale)}{stop.provenance.revision ? <code title={stop.provenance.revision}> · {stop.provenance.revision.slice(0, 10)}</code> : null}</p>
-      {editing === stop.id ? <form className="route-note-form" onSubmit={event => { event.preventDefault(); if (route.editNote(stop.id, note)) setEditing(null); }}>
+      {editing === stop.id ? <form className="route-note-form" onSubmit={event => { event.preventDefault(); if (route.editNote(stop.id, note, stopTitle)) setEditing(null); }}>
+        <label className="field-label">{en ? "Stop title (optional)" : "位置标题（可选）"}<input maxLength={MAX_STOP_TITLE_LENGTH} value={stopTitle} onChange={event => setStopTitle(event.target.value)} /></label>
         <label className="field-label">{en ? "Note" : "笔记"}<textarea autoFocus rows={4} maxLength={MAX_NOTE_LENGTH} value={note} onChange={event => setNote(event.target.value)} /></label>
         <div className="button-row"><button className="button-primary" type="submit"><Save size={16} />{en ? "Save note" : "保存笔记"}</button>
           <button className="button-secondary" type="button" onClick={() => setEditing(null)}>{en ? "Cancel" : "取消"}</button></div>

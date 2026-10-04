@@ -98,6 +98,6 @@ export function useReadingRoute(repository: RepositoryRecord) {
   return { route, loaded, error, reload, add, remove, removed, undoRemove, move,
     clearTransientError: () => { if (error === "duplicate" || error === "limit") setError(null); },
     rename: (title: string) => persist({ ...route, title: title.trim() }),
-    editNote: (id: string, note: string) => persist({ ...route, entries: route.entries.map(stop => stop.id === id ? { ...stop, note } : stop) }),
+    editNote: (id: string, note: string, title: string) => persist({ ...route, entries: route.entries.map(stop => stop.id === id ? { ...stop, note, title: title.trim() } : stop) }),
   };
 }
