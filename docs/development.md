@@ -19,6 +19,26 @@
 - 根目录启动脚本会覆盖前端 API 地址，使它对应本次后端端口。单独开发前端时可设置 `frontend/.env.local` 中的 `NEXT_PUBLIC_API_BASE_URL`，不要向前端环境放模型 Key。
 - 导入目录决定访问范围。不读取其外层或全局 Git 忽略配置；详情见[文件排除规则](design-notes.md#文件排除规则放在哪里)。
 
+## 模型与运行说明
+
+阅读、搜索、保存路线和导出 Markdown 不需要模型配置。问答与草案使用 `.env` 中的 `OPENAI_API_KEY`、`CODE_AGENT_OPENAI_MODEL`，兼容服务可另设 `OPENAI_BASE_URL`。Key 仅传给后端，不进入前端或镜像；配置存在不代表模型服务已经连通。
+
+模型功能会将相关源码发给所配置的服务，并可能产生 API 费用，只应使用获准发送的代码。六条预定义真实问答案例尚未执行，不能由自动化测试中的替身回答推断真实回答质量；原始状态保留在[问答记录](evidence/qa-status.json)。首页展示的是实际搜索、源码阅读和笔记导出，不是模型问答效果。
+
+关键词检索使用行级片段，符号定位基于正则而非 AST 或语义索引；跨文件问题可能漏证据。每次读取最多 200 行。目录、搜索、读取和草案共用文件排除规则，包括 `.gitignore`、常见凭据路径和符号链接，但不检测普通源码中的密钥。完整取舍见[设计记录](design-notes.md)。
+
+草案使用完整文件内容，适合较小文件；应用前检查原文件哈希。“应用并检查”失败时只恢复本次写入的目标文件，不能撤销检查脚本的其他副作用。pytest 和 npm scripts 会执行仓库代码，只对信任的仓库运行检查。原生与容器启动都不提供不可信代码执行沙箱、鉴权或多用户隔离，不要直接暴露到公网。
+
+### Model and execution notes
+
+Reading, search, routes, and Markdown export do not require a model. Q&A and drafts use `OPENAI_API_KEY` and `CODE_AGENT_OPENAI_MODEL` in the root `.env`, with optional `OPENAI_BASE_URL` for compatible services. Keys stay on the backend, outside the frontend and images. Restart native development or rerun Compose after changes. Configuration presence does not establish connectivity.
+
+Model features send relevant source to the configured service and may incur API costs. Only use code you are authorized to send. The six real-model cases remain unrun; test doubles are not evidence of answer quality. See the [validation record](evidence/qa-status.json). Homepage demos show actual source reading and note export, not model answers.
+
+Retrieval uses line-based chunks and regex symbol matching, not AST or semantic analysis. Reads are capped at 200 lines. Shared file exclusions are path filters, not secret detection inside source. Drafts use full-file replacements and suit small files. Applying checks the original hash; rollback restores patched targets, not arbitrary effects of test scripts.
+
+Run checks only on trusted repositories: pytest and npm scripts execute repository code. Neither native nor container deployment provides an execution sandbox, authentication, or multi-user isolation. Keep the service local. See [design notes](design-notes.md) for the implementation details and [route storage and provenance](reading-route.md#english) before sharing exports.
+
 ## Docker 挂载与端口
 
 默认 Compose 不挂载宿主源码。公开 GitHub 仓库可直接在界面导入。

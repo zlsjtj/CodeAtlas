@@ -1,38 +1,41 @@
-# CodeAtlas
+<h1 align="center">CodeAtlas</h1>
 
-把陌生仓库放到一个本地工作台里读：搜索关键词或符号，沿行号核对源码。基础阅读不需要模型 Key。
+<p align="center"><strong>读懂陌生仓库，留下自己的源码阅读路线。</strong></p>
+<p align="center">搜索实现、核对源码，把关键代码和笔记整理成可分享的 Markdown。<br>本地运行，阅读与整理无需模型 Key。</p>
 
-[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE)
+<p align="center">
+  <a href="https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml"><img src="https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0f766e" alt="MIT License"></a>
+</p>
 
-[快速体验](#在本机试一次) · [阅读案例](docs/reading-example.md) · [预览版](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.2) · [English](README.en.md)
-
-## 从一个问题开始
-
-**Click 的 `@command()` 怎样把函数变成可执行的命令？**
-
-在这个固定版本里，装饰器把原函数交给 `Command` 保存为回调，执行命令时再经 `Context.invoke()` 调用。下面沿三处源码核对这个过程。
+<p align="center">
+  <a href="#快速开始">快速开始</a> ·
+  <a href="docs/examples/click-reading-route.md">看看导出的阅读路线</a> ·
+  <a href="docs/development.md">文档</a> ·
+  <a href="README.en.md">English</a>
+</p>
 
 <picture>
   <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-mobile.png">
   <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-reading.png">
-  <img alt="在 Click 中搜索 callback=f，查看装饰器如何保存回调，再定位执行回调的源码" src="docs/assets/codeatlas-reading.gif">
+  <img alt="CodeAtlas 真实工作台：搜索 Click 的 callback=f，打开匹配源码，沿行号阅读回调的保存与执行" src="docs/assets/codeatlas-reading.gif">
 </picture>
 
-约 28 秒实录，原速、无模型调用。手机显示单栏静态画面。[完整动画](docs/assets/codeatlas-reading.gif) · [案例与源码核对记录](docs/reading-example.md)
+<p align="center">在 Click 中搜索、定位、核对源码。28 秒原速实录，无模型调用。<br><a href="docs/assets/codeatlas-reading.gif">播放完整演示</a> · <a href="docs/reading-example.md">跟着案例读一遍</a></p>
 
-在这个固定版本里，阅读路径是：
+## 从找到代码，到讲清代码
 
-1. 搜索 `callback=f`：装饰器用原函数创建命令对象，[decorators.py:248](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248)。
-2. 搜索 `self.callback = callback`：`Command` 保存这个回调，[core.py:1090](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090)。
-3. 搜索 `ctx.invoke(self.callback`：命令执行时，把解析后的参数交给回调，[core.py:1442](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442)。
+接手一个项目、追查某个功能的实现，或准备一篇源码笔记，都可以从一个具体问题开始。
 
-这是手动沿源码核对的阅读路径，不是自动生成的调用图。
+- **找到实现。** 导入本地目录或公开 GitHub 仓库，搜索关键词或符号；点击结果，在目录和带行号的源码之间切换，查看高亮与上下文。
+- **留下理解。** 保存关键代码的行范围，写下笔记，按阅读顺序排列。下次打开路线，可以回到对应位置继续读。
+- **分享一条完整路线。** 导出 Markdown，保留源码摘录、笔记、行号和版本来源。把散落在文件里的线索，整理成别人能跟着看的阅读记录。
 
-读完后可以把这三处源码和笔记保存为[阅读路线](docs/reading-route.md)，再[导出 Markdown](docs/examples/click-reading-route.md)。这是工作台实际导出的 Click 示例，不是模型回答。路线保存在当前浏览器；此功能属于开发版，不包含在 `v0.1.0-preview.2` 中。
+路线保存在当前浏览器，可随时导出。[查看路线操作](docs/reading-route.md)
 
-## 在本机试一次
+## 快速开始
 
-准备 Python 3.11+、Node.js 20.12+ 和 Git：
+准备 **Python 3.11+、Node.js 20.12+ 和 Git**，然后运行：
 
 ```sh
 git clone https://github.com/zlsjtj/CodeAtlas.git
@@ -41,39 +44,69 @@ npm run setup
 npm run demo
 ```
 
-打开终端打印的地址。Click 已导入并索引，直接在“关键词”里搜索 `callback=f`，点击结果即可跟着上面的例子阅读。首次运行会从 GitHub 下载固定提交。
+打开终端打印的地址，**Click 已经导入并建立索引**。搜索 `callback=f`，点击结果，就能开始上面的阅读过程。首次运行会下载固定版本的 Click；示例数据独立保存，不覆盖 `.env`，也不使用其中的模型 Key。退出按 `Ctrl+C`。
 
-退出按 `Ctrl+C`。示例使用独立数据，不覆盖 `.env`，也不使用其中的模型 Key。
+**读自己的仓库：** 用 `npm run dev` 启动，点击顶部 `+` 导入仓库，再建立索引。
 
-读自己的仓库用 `npm run dev`，点击顶部 `+` 导入本地目录或公开 GitHub 仓库，再建立索引。[Windows / Ubuntu 启动、端口与数据目录](docs/development.md)
+<details>
+<summary><strong>使用 Docker Compose</strong></summary>
 
-### Docker Compose
-
-已安装 Docker 和 Compose 时，在项目根目录运行：
+克隆本项目后，在项目根目录运行：
 
 ```sh
 docker compose up --build --wait
 ```
 
-打开 [127.0.0.1:3000](http://127.0.0.1:3000)，导入公开仓库。Docker 不自动加载上述固定版本示例；宿主源码需要[显式挂载](docs/development.md#docker-挂载与端口)。端口只绑定本机，命名卷保存数据，`docker compose down` 保留数据。
+打开 [127.0.0.1:3000](http://127.0.0.1:3000)，在界面导入公开仓库。Compose 使用命名卷保存数据，`docker compose down` 后仍然保留；固定 Click 示例由原生 `npm run demo` 提供。
 
-### 可选：模型问答
+宿主源码通过[显式挂载](docs/development.md#docker-挂载与端口)导入。端口默认只向本机开放。
 
-在根目录 `.env` 配置 `OPENAI_API_KEY`、`CODE_AGENT_OPENAI_MODEL`，兼容服务另设 `OPENAI_BASE_URL`，然后用 `npm run dev` 启动。Docker 修改配置后重新执行 Compose 命令。
+</details>
 
-问答和草案会把相关源码发送给模型服务，并产生 API 费用。Key 只交给后端；配置存在不代表服务可用。六条真实问答案例尚未执行，不能据此评价回答质量。[验收状态](docs/evidence/qa-status.json)
+[启动、端口与数据目录](docs/development.md) · [版本记录](https://github.com/zlsjtj/CodeAtlas/releases)
 
-## 使用边界
+## 一次阅读，一份能带走的笔记
 
-- 关键词和行级片段检索，符号匹配基于正则，不是 AST 或语义索引。跨文件问题可能漏证据。
-- 读取每次最多 200 行。目录、检索、读取和草案共用文件排除规则，包括 `.gitignore`、常见凭据路径和符号链接；这不是源码中的密钥检测。
-- 模型草案适合小文件。应用前校验文件哈希；“应用并检查”失败时只恢复本次写入的目标文件，不能撤销检查脚本的其他副作用。
-- pytest 和 npm scripts 会执行仓库代码，只应对信任的仓库运行检查。没有执行沙箱、鉴权或多用户隔离，不要直接暴露到公网。
+**Click 的 `@command()` 怎样把函数变成命令？**
 
-## 开发与反馈
+沿着源码找到三个位置，就能把“创建命令、保存回调、执行回调”整理成一条路线：
 
-FastAPI / SQLite 后端，Next.js 前端。
+1. [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248)：装饰器把原函数作为 callback 交给命令对象。
+2. [`core.py:1090`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090)：`Command` 把 callback 保存到实例。
+3. [`core.py:1442`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442)：执行命令时，把解析后的参数交给 callback。
 
-[开发与测试命令](docs/development.md) · [设计取舍](docs/design-notes.md) · [换仓库时的迟到请求案例](docs/maintenance-reading.md)
+**[打开工作台实际导出的 Markdown →](docs/examples/click-reading-route.md)**
 
-遇到启动、定位或引用问题，可以[提交 Issue](https://github.com/zlsjtj/CodeAtlas/issues/new/choose)，附复现步骤和公开最小样例，删除 Key 和私有代码。项目采用 [MIT](LICENSE)；演示中的 Click 源码保留[第三方许可](THIRD_PARTY_NOTICES.md)。
+这份笔记包含三处源码摘录、阅读注释和固定提交链接，可以直接在 GitHub 上阅读。你也可以用同样的方式整理自己的仓库。
+
+<details>
+<summary><strong>查看阅读路线工作台</strong></summary>
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-route-mobile.png">
+  <img alt="CodeAtlas 阅读路线：三处 Click 源码、逐条笔记、版本来源与导出 Markdown 操作" src="docs/assets/codeatlas-route.png">
+</picture>
+
+[完整案例与复现步骤](docs/reading-example.md) · [源码核对记录](docs/evidence/reading-route.json)
+
+</details>
+
+## 需要时，接上模型一起读
+
+在同一工作台中提问，查看回答引用与工具调用记录，再回到源码核对。需要改动时，先查看草案和 diff，确认后应用，并运行仓库检查。
+
+在根目录 `.env` 设置 `OPENAI_API_KEY`、`CODE_AGENT_OPENAI_MODEL`；兼容服务另设 `OPENAI_BASE_URL`。用 `npm run dev` 启动，或修改配置后重新执行 Compose 命令。[配置与模型验证说明](docs/development.md#模型与运行说明)
+
+模型功能会将相关源码发送到所配置的服务，并产生 API 费用；Key 仅供后端使用。
+
+## 开发与交流
+
+Next.js / TypeScript 前端，FastAPI / SQLite 后端。CI 覆盖 Windows、Ubuntu 原生启动，以及 Linux Docker 构建与运行。
+
+[开发与测试](docs/development.md) · [设计记录](docs/design-notes.md) · [一次维护的复现与修复](docs/maintenance-reading.md) · [提交问题或建议](https://github.com/zlsjtj/CodeAtlas/issues/new/choose)
+
+本项目面向本机使用，请勿直接暴露到公网；只对信任的仓库运行检查。导出笔记或提交 Issue 前，请移除私有代码和凭据。[运行说明](docs/development.md#模型与运行说明)
+
+**觉得这套阅读方式有用，欢迎 Star 收藏，也欢迎分享你读过的仓库和阅读路线。**
+
+[MIT License](LICENSE) · [第三方许可](THIRD_PARTY_NOTICES.md)

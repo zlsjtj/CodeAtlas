@@ -1,38 +1,41 @@
-# CodeAtlas
+<h1 align="center">CodeAtlas</h1>
 
-Read unfamiliar codebases in a local workspace: search text or symbols, then follow the source with line numbers. No model key needed for code reading.
+<p align="center"><strong>Explore the code. Keep the trail.</strong></p>
+<p align="center">Search source, check context, and turn code and notes into a shareable reading route.<br>Runs locally. No model key needed to read, annotate, or export.</p>
 
-[![CI](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg)](https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml) · [MIT](LICENSE)
+<p align="center">
+  <a href="https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml"><img src="https://github.com/zlsjtj/CodeAtlas/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0f766e" alt="MIT License"></a>
+</p>
 
-[Quick start](#try-it-locally) · [Example](docs/reading-example.en.md) · [Preview](https://github.com/zlsjtj/CodeAtlas/releases/tag/v0.1.0-preview.2) · [中文](README.md)
-
-## Follow One Question
-
-**How does Click's `@command()` turn a function into an executable command?**
-
-`Command` stores the decorated function as its callback, then runs it through `Context.invoke()`. The recording checks this path in the pinned source.
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="docs/examples/click-reading-route.en.md">Export example</a> ·
+  <a href="docs/development.md">Docs</a> ·
+  <a href="README.md">中文</a>
+</p>
 
 <picture>
   <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-reading-en-mobile.png">
   <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/codeatlas-reading-en.png">
-  <img alt="Searching callback=f in Click, inspecting how the decorator stores the function, then finding the callback invocation" src="docs/assets/codeatlas-reading-en.gif">
+  <img alt="CodeAtlas in use: searching callback=f in Click, opening a match, and following the source that stores and invokes the callback" src="docs/assets/codeatlas-reading-en.gif">
 </picture>
 
-About 28 seconds of actual use, at original speed with no model calls. Phones show a single-column still. [Full animation](docs/assets/codeatlas-reading-en.gif) · [Case and source checks](docs/reading-example.en.md)
+<p align="center">Search, open, and check Click's source. A 28-second recording at original speed, with no model calls.<br><a href="docs/assets/codeatlas-reading-en.gif">Watch the full demo</a> · <a href="docs/reading-example.en.md">Follow the walkthrough</a></p>
 
-In the pinned checkout:
+## From Finding Code to Explaining It
 
-1. Search `callback=f`: the decorator creates a command with the original function as its callback, [decorators.py:248](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248).
-2. Search `self.callback = callback`: `Command` stores that callback, [core.py:1090](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090).
-3. Search `ctx.invoke(self.callback`: command execution passes the parsed parameters to the callback, [core.py:1442](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442).
+Start with a question when joining a project, investigating an implementation, or writing a source-code walkthrough.
 
-This is a manual source-reading path, not an automatically generated call graph.
+- **Find the implementation.** Import a local directory or public GitHub repository and search text or symbols. Open a result to explore highlighted source, line numbers, and surrounding context alongside the file tree.
+- **Keep what you learn.** Save important line ranges, add notes, and arrange them in reading order. Reopen a stop when you come back to the code.
+- **Share the whole route.** Export Markdown with source excerpts, notes, line ranges, and version provenance. Give the next reader a path through the code, not just a list of filenames.
 
-Keep these three locations and your notes as a [reading route](docs/reading-route.md#english), then [export Markdown](docs/examples/click-reading-route.en.md). This Click example is an actual workspace export, not a model answer. Routes stay in the current browser. This development feature is not included in `v0.1.0-preview.2`.
+Routes stay in the current browser and can be exported at any time. [Using reading routes](docs/reading-route.md#english)
 
-## Try It Locally
+## Quick Start
 
-Install Python 3.11+, Node.js 20.12+, and Git, then:
+With **Python 3.11+, Node.js 20.12+, and Git** installed:
 
 ```sh
 git clone https://github.com/zlsjtj/CodeAtlas.git
@@ -41,39 +44,69 @@ npm run setup
 npm run demo
 ```
 
-Open the printed URL. Click is already imported and indexed: search `callback=f` in Text mode and open a result to follow the example. The first run downloads the pinned commit from GitHub.
+Open the printed URL. **Click is already imported and indexed.** Search `callback=f` and open a result to follow the demo. The first run downloads a pinned Click revision. Demo data is separate; `.env` stays unchanged and its model key is not used. Press `Ctrl+C` to stop.
 
-Press `Ctrl+C` to stop. The example uses separate data, leaves `.env` unchanged, and does not use your model key.
+**Bring your own repository:** start with `npm run dev`, import it using the top `+` button, then build the index.
 
-For your own repositories, use `npm run dev`, import a local directory or public GitHub repository with the top `+` button, then index it. [Windows / Ubuntu setup, ports and data directories](docs/development.md)
+<details>
+<summary><strong>Use Docker Compose</strong></summary>
 
-### Docker Compose
-
-With Docker and Compose installed, run from the project root:
+After cloning this project, run from its root:
 
 ```sh
 docker compose up --build --wait
 ```
 
-Open [127.0.0.1:3000](http://127.0.0.1:3000) and import a public repository. Docker does not preload the pinned example above; local source needs an [explicit mount](docs/development.md#docker-挂载与端口). Ports bind only to loopback, named volumes retain data, and `docker compose down` preserves them.
+Open [127.0.0.1:3000](http://127.0.0.1:3000) and import a public repository. Named volumes retain data after `docker compose down`. The preloaded Click example is provided by the native `npm run demo` command.
 
-### Optional Q&A
+Local source requires an [explicit mount](docs/development.md#docker-挂载与端口). Ports bind only to loopback by default.
 
-Set `OPENAI_API_KEY` and `CODE_AGENT_OPENAI_MODEL` in the root `.env`; compatible services can also use `OPENAI_BASE_URL`. Start with `npm run dev`, or rerun Compose after changing configuration.
+</details>
 
-Q&A and drafts send relevant source to the model service and incur API costs. Keys stay on the backend. A configured key does not establish service availability. The six real-model cases have not been run; answer quality is not yet evaluated. [Validation status](docs/evidence/qa-status.json)
+[Setup, ports, and data directories](docs/development.md) · [Releases](https://github.com/zlsjtj/CodeAtlas/releases)
 
-## Limits
+## A Walkthrough You Can Take With You
 
-- Retrieval uses keywords and line-based chunks; symbol matching uses regexes, not an AST or semantic index. Cross-file questions may miss evidence.
-- Reads are limited to 200 lines. Tree, search, read and draft operations share exclusions for `.gitignore`, common credential paths and symlinks. Path filtering is not secret detection inside source files.
-- Drafts are intended for small files. Applying checks the original file hash; apply-and-check rollback restores only the patched target files, not other effects of test scripts.
-- pytest and npm scripts execute repository code. Run checks only on trusted repositories. There is no execution sandbox, authentication or multi-user isolation; do not expose the service publicly.
+**How does Click's `@command()` turn a function into a command?**
 
-## Development and Feedback
+Follow three source locations, then save a route from command creation to callback execution:
 
-FastAPI / SQLite backend, Next.js frontend.
+1. [`decorators.py:248`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/decorators.py#L248): the decorator passes the original function to the command as its callback.
+2. [`core.py:1090`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1090): `Command` stores the callback on the instance.
+3. [`core.py:1442`](https://github.com/pallets/click/blob/06b2a678741131fd577ce170e23e5ca0aeba0309/src/click/core.py#L1442): command execution passes the parsed parameters to that callback.
 
-[Development commands](docs/development.md) · [Design notes](docs/design-notes.md) · [Late-response maintenance case](docs/maintenance-reading.md)
+**[Read the actual Markdown export →](docs/examples/click-reading-route.en.md)**
 
-[Report a problem](https://github.com/zlsjtj/CodeAtlas/issues/new/choose) with steps and a minimal public example; remove keys and private code. CodeAtlas is [MIT-licensed](LICENSE). Click source shown in the demo retains its [third-party license](THIRD_PARTY_NOTICES.md).
+It contains three source excerpts, reading notes, and commit-pinned links, ready to read on GitHub. Use the same workflow to document your own repository.
+
+<details>
+<summary><strong>See the reading route workspace</strong></summary>
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/codeatlas-route-en-mobile.png">
+  <img alt="CodeAtlas reading route with three Click source excerpts, notes, version provenance, and the Markdown export action" src="docs/assets/codeatlas-route-en.png">
+</picture>
+
+[Full walkthrough and reproduction steps](docs/reading-example.en.md) · [Source checks](docs/evidence/reading-route-en.json)
+
+</details>
+
+## Add a Model When You Need One
+
+Ask questions in the same workspace, inspect citations and tool-call records, then open the source to check the answer. For changes, review the draft and diff before confirming an apply and running repository checks.
+
+Set `OPENAI_API_KEY` and `CODE_AGENT_OPENAI_MODEL` in the root `.env`; compatible services can also use `OPENAI_BASE_URL`. Start with `npm run dev`, or rerun Compose after changing configuration. [Model setup and validation notes](docs/development.md#model-and-execution-notes)
+
+Model features send relevant source to the configured service and incur API costs. Keys stay on the backend.
+
+## Development and Community
+
+Next.js / TypeScript frontend, FastAPI / SQLite backend. CI covers native startup on Windows and Ubuntu, plus Docker builds and runtime checks on Linux.
+
+[Development and tests](docs/development.md) · [Design notes](docs/design-notes.md) · [A reproduced and fixed maintenance case](docs/maintenance-reading.md) · [Report a problem or idea](https://github.com/zlsjtj/CodeAtlas/issues/new/choose)
+
+Keep the service local; do not expose it to the public internet. Run checks only on trusted repositories. Remove private code and credentials before sharing exports or filing issues. [Execution notes](docs/development.md#model-and-execution-notes)
+
+**Useful for the way you read code? Give CodeAtlas a Star, or share a repository and the route you took through it.**
+
+[MIT License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
