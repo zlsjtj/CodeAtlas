@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter
 
 from app.core.config import get_settings
@@ -23,6 +25,7 @@ def get_meta() -> MetaResponse:
         app_name=settings.app_name,
         version=settings.app_version,
         api_prefix=settings.api_prefix,
+        model_configured=bool(os.getenv("OPENAI_API_KEY", "").strip()),
         features=[
             "repository_import",
             "github_clone_import",

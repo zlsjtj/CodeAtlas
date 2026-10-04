@@ -31,6 +31,7 @@ import { getWorkspaceCopy } from "@/lib/workspace-i18n";
 
 import type { WorkspaceFeedbackHandlers } from "./workspace-shared";
 import { toErrorMessage } from "./workspace-shared";
+import { useRepositoryRequest } from "./use-repository-request";
 
 type UsePatchChecksWorkspaceOptions = WorkspaceFeedbackHandlers & {
   locale: WorkspaceLocale;
@@ -48,6 +49,7 @@ export function usePatchChecksWorkspace({
   setStatusMessage,
 }: UsePatchChecksWorkspaceOptions) {
   const copy = getWorkspaceCopy(locale);
+  const captureRequest = useRepositoryRequest(selectedRepoId);
   const [patchResponse, setPatchResponse] = useState<PatchDraftResponse | null>(null);
   const [patchBatchResponse, setPatchBatchResponse] = useState<PatchBatchDraftResponse | null>(null);
   const [patchApplyResponse, setPatchApplyResponse] = useState<PatchApplyResponse | null>(null);
@@ -176,6 +178,7 @@ export function usePatchChecksWorkspace({
   }
 
   async function handleDraftPatch(repoId: number, targetPaths: string[], instruction: string) {
+    const isCurrent = captureRequest();
     const normalizedTargetPaths = targetPaths
       .map((targetPath) => targetPath.trim())
       .filter((targetPath) => targetPath.length > 0);
@@ -196,6 +199,7 @@ export function usePatchChecksWorkspace({
           response_language: locale,
           target_path: normalizedTargetPaths[0],
         });
+        if (!isCurrent()) return;
         setPatchResponse(response);
         setPatchBatchResponse(null);
         setStatusMessage(copy.feedback.draftPatchSingleReady(response.target_path));
@@ -206,6 +210,7 @@ export function usePatchChecksWorkspace({
           response_language: locale,
           target_paths: normalizedTargetPaths,
         });
+        if (!isCurrent()) return;
         setPatchBatchResponse(response);
         setPatchResponse(null);
         setStatusMessage(copy.feedback.draftPatchBatchReady(response.changed_file_count));
@@ -217,13 +222,15 @@ export function usePatchChecksWorkspace({
       setCheckResponse(null);
       setSelectedRepoId(repoId);
     } catch (draftError) {
+      if (!isCurrent()) return;
       setError(toErrorMessage(draftError, copy.feedback.draftPatch));
     } finally {
-      setIsDraftingPatch(false);
+      if (isCurrent()) setIsDraftingPatch(false);
     }
   }
 
   async function handleApplyPatchAndRunChecks(draft: PatchDraftResponse) {
+    const isCurrent = captureRequest();
     setIsApplyingAndChecking(true);
     setError(null);
     setStatusMessage(null);
@@ -237,17 +244,20 @@ export function usePatchChecksWorkspace({
         response_language: locale,
         target_path: draft.target_path,
       });
+      if (!isCurrent()) return;
       setPatchApplyResponse(response.patch);
       setCheckResponse(response.checks);
       setStatusMessage(copy.feedback.applyPatchAndVerifyDone);
     } catch (applyError) {
+      if (!isCurrent()) return;
       setError(toErrorMessage(applyError, copy.feedback.applyPatchAndVerify));
     } finally {
-      setIsApplyingAndChecking(false);
+      if (isCurrent()) setIsApplyingAndChecking(false);
     }
   }
 
   async function handleApplyPatch(draft: PatchDraftResponse) {
+    const isCurrent = captureRequest();
     setIsApplyingPatch(true);
     setError(null);
     setStatusMessage(null);
@@ -259,16 +269,19 @@ export function usePatchChecksWorkspace({
         repo_id: draft.repo_id,
         target_path: draft.target_path,
       }, locale);
+      if (!isCurrent()) return;
       setPatchApplyResponse(response);
       setStatusMessage(copy.feedback.applyPatchDone(response.target_path));
     } catch (applyError) {
+      if (!isCurrent()) return;
       setError(toErrorMessage(applyError, copy.feedback.applyPatch));
     } finally {
-      setIsApplyingPatch(false);
+      if (isCurrent()) setIsApplyingPatch(false);
     }
   }
 
   async function handleApplyPatchBatch(repoId: number, drafts: PatchDraftFile[]) {
+    const isCurrent = captureRequest();
     if (drafts.length === 0) {
       return;
     }
@@ -286,17 +299,20 @@ export function usePatchChecksWorkspace({
         })),
         repo_id: repoId,
       }, locale);
+      if (!isCurrent()) return;
       setPatchApplyResponse(null);
       setPatchBatchApplyResponse(response);
       setStatusMessage(copy.feedback.applyPatchBatchDone(response.applied_count, response.noop_count));
     } catch (applyError) {
+      if (!isCurrent()) return;
       setError(toErrorMessage(applyError, copy.feedback.applyPatchBatch));
     } finally {
-      setIsApplyingBatchPatch(false);
+      if (isCurrent()) setIsApplyingBatchPatch(false);
     }
   }
 
   async function handleApplyPatchBatchAndRunChecks(repoId: number, drafts: PatchDraftFile[]) {
+    const isCurrent = captureRequest();
     if (drafts.length === 0) {
       return;
     }
@@ -316,18 +332,21 @@ export function usePatchChecksWorkspace({
         repo_id: repoId,
         response_language: locale,
       });
+      if (!isCurrent()) return;
       setPatchApplyResponse(null);
       setPatchBatchApplyResponse(response.patch);
       setCheckResponse(response.checks);
       setStatusMessage(copy.feedback.applyPatchBatchAndVerifyDone);
     } catch (applyError) {
+      if (!isCurrent()) return;
       setError(toErrorMessage(applyError, copy.feedback.applyPatchBatchAndVerify));
     } finally {
-      setIsApplyingBatchAndChecking(false);
+      if (isCurrent()) setIsApplyingBatchAndChecking(false);
     }
   }
 
   async function handleRunChecks(profileIds?: string[]) {
+    const isCurrent = captureRequest();
     if (!selectedRepository) {
       return;
     }
@@ -342,12 +361,14 @@ export function usePatchChecksWorkspace({
         repo_id: selectedRepository.id,
         response_language: locale,
       });
+      if (!isCurrent()) return;
       setCheckResponse(response);
       setStatusMessage(copy.feedback.runChecksDone(response.results.length));
     } catch (checkError) {
+      if (!isCurrent()) return;
       setError(toErrorMessage(checkError, copy.feedback.runChecks));
     } finally {
-      setIsRunningChecks(false);
+      if (isCurrent()) setIsRunningChecks(false);
     }
   }
 

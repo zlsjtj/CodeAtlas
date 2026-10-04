@@ -27,6 +27,7 @@ import type {
   RepositoryIndexResponse,
   RepositoryListResponse,
   RepositoryRecord,
+  ToolExecutionResponse,
 } from "@/lib/types";
 import type { WorkspaceLocale } from "@/lib/workspace-i18n";
 
@@ -48,12 +49,12 @@ function buildLocaleHeaders(locale?: WorkspaceLocale): HeadersInit | undefined {
 async function request<T>(path: string, init?: RequestOptions): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache: "no-store",
+    ...init,
     headers: {
       "Content-Type": "application/json",
       ...(buildLocaleHeaders(init?.locale) ?? {}),
       ...(init?.headers ?? {}),
     },
-    ...init,
   });
 
   if (!response.ok) {
@@ -76,6 +77,17 @@ export function fetchHealth() {
 
 export function fetchMeta() {
   return request<MetaResponse>("/api/meta");
+}
+
+export function repositoryTool(
+  tool: "list-tree" | "search" | "read" | "find-symbol",
+  payload: Record<string, unknown>,
+  locale: WorkspaceLocale,
+  signal?: AbortSignal,
+) {
+  return request<ToolExecutionResponse>(`/api/tools/${tool}`, {
+    method: "POST", body: JSON.stringify(payload), locale, signal,
+  });
 }
 
 export function listRepositories() {

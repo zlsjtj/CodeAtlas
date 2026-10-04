@@ -19,6 +19,7 @@ class MetaResponse(BaseModel):
     version: str
     api_prefix: str
     features: list[str]
+    model_configured: bool = False
 
 
 class MessageResponse(BaseModel):

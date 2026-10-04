@@ -1,542 +1,143 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
+import { BookOpen, FilePenLine, ListChecks, Menu, MessageSquare, Plus, X } from "lucide-react";
 import { ChecksPanel } from "@/components/checks/checks-panel";
-import { ChatHistoryPanel } from "@/components/chat/chat-history-panel";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { ChatHistoryPanel } from "@/components/chat/chat-history-panel";
 import { CitationPanel } from "@/components/citations/citation-panel";
 import { JobActivityPanel } from "@/components/jobs/job-activity-panel";
 import { PatchDraftPanel } from "@/components/patches/patch-draft-panel";
 import { RepositoryImportForm } from "@/components/repositories/repository-import-form";
-import { RepositoryList } from "@/components/repositories/repository-list";
+import { RepositoryReader, RepositoryTree } from "@/components/reader/repository-reader";
 import { useChatWorkspace } from "@/lib/hooks/use-chat-workspace";
 import { usePatchChecksWorkspace } from "@/lib/hooks/use-patch-checks-workspace";
 import { useWorkspaceRepositories } from "@/lib/hooks/use-workspace-repositories";
-import {
-  formatFeature,
-  formatHealthStatus,
-  formatRepositorySource,
-  formatRepositoryStatus,
-  getWorkspaceCopy,
-  localeOptions,
-  type WorkspaceLocale,
-} from "@/lib/workspace-i18n";
+import { useRepositoryReader, type SourceTarget } from "@/lib/hooks/use-repository-reader";
+import { formatRepositoryStatus, type WorkspaceLocale } from "@/lib/workspace-i18n";
+import type { RepositoryRecord } from "@/lib/types";
 
-type WorkspaceView = "chat" | "patch" | "checks";
-
-type WorkspaceTab = {
-  id: WorkspaceView;
-  label: string;
-  hint: string;
-  count?: number;
-};
+type View = "read" | "chat" | "patch" | "checks";
 
 export function WorkspaceShell() {
   const [locale, setLocale] = useState<WorkspaceLocale>("zh-CN");
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<WorkspaceView>("chat");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const copy = getWorkspaceCopy(locale);
+  const [importOpen, setImportOpen] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const importButton = useRef<HTMLButtonElement>(null);
+  const repositories = useWorkspaceRepositories({ locale, setError, setStatusMessage });
+  const en = locale === "en";
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
+  useEffect(() => {
+    if (importOpen) dialog.current?.showModal();
+    else { dialog.current?.close(); importButton.current?.focus(); }
+  }, [importOpen]);
+  function selectRepo(id: number | null) {
+    repositories.setSelectedRepoId(id);
+    setError(null);
+    setStatusMessage(null);
+  }
+  return <main className="atlas-app">
+    <header className="app-bar">
+      <h1><BookOpen size={23} />CodeAtlas</h1>
+      <label className="repository-picker"><span className="sr-only">{en ? "Current repository" : "当前仓库"}</span>
+        <select aria-label={en ? "Current repository" : "当前仓库"} value={repositories.selectedRepoId ?? ""}
+          onChange={(event) => selectRepo(Number(event.target.value))}>
+          {repositories.repositories.length === 0 ? <option value="">{en ? "No repositories" : "暂无仓库"}</option> : null}
+          {repositories.repositories.map((repo) => <option key={repo.id} value={repo.id}>{repo.name}</option>)}
+        </select></label>
+      <button ref={importButton} className="icon-button" title={en ? "Import repository" : "导入仓库"} aria-label={en ? "Import repository" : "导入仓库"} onClick={() => setImportOpen(true)}><Plus size={19} /></button>
+      <span className={`connection-status ${repositories.health ? "connected" : ""}`}>{repositories.health ? (en ? "Local" : "本地") : (en ? "Connecting" : "连接中")}</span>
+      <select className="language-picker" aria-label={en ? "Language" : "语言"} value={locale} onChange={(event) => setLocale(event.target.value as WorkspaceLocale)}>
+        <option value="zh-CN">中文</option><option value="en">English</option>
+      </select>
+    </header>
+    {error || statusMessage ? <div className={`feedback-bar ${error ? "is-error" : ""}`} role={error ? "alert" : "status"}>
+      <span>{error ?? statusMessage}</span><button className="icon-button" aria-label={en ? "Dismiss" : "关闭提示"} title={en ? "Dismiss" : "关闭提示"}
+        onClick={() => { setError(null); setStatusMessage(null); }}><X size={16} /></button>
+    </div> : null}
+    <dialog ref={dialog} className="import-dialog" onCancel={() => setImportOpen(false)} onClose={() => setImportOpen(false)}>
+      <button className="icon-button dialog-close" aria-label={en ? "Close import" : "关闭导入"} title={en ? "Close import" : "关闭导入"} onClick={() => setImportOpen(false)}><X size={18} /></button>
+      {error ? <p className="inline-error" role="alert">{error}</p> : null}
+      <RepositoryImportForm isSubmitting={repositories.isSubmitting} locale={locale} onSubmit={async (payload) => {
+        const success = await repositories.handleRepositorySubmit(payload);
+        if (success) setImportOpen(false);
+      }} />
+    </dialog>
+    {repositories.selectedRepository ? <RepositorySession key={repositories.selectedRepository.id} repository={repositories.selectedRepository}
+      locale={locale} modelConfigured={repositories.meta?.model_configured ?? false} repositories={repositories} onSelect={selectRepo}
+      setError={setError} setStatusMessage={setStatusMessage} /> : <div className="workspace-empty">
+        <BookOpen size={36} /><h2>{en ? "No repository open" : "尚未打开仓库"}</h2>
+        <button className="button-primary" disabled={repositories.isLoading} onClick={() => setImportOpen(true)}><Plus size={16} />{en ? "Import repository" : "导入仓库"}</button>
+      </div>}
+  </main>;
+}
 
-  const repositoriesWorkspace = useWorkspaceRepositories({
-    locale,
-    setError,
-    setStatusMessage,
-  });
-  const chatWorkspace = useChatWorkspace({
-    locale,
-    repositories: repositoriesWorkspace.repositories,
-    selectedRepoId: repositoriesWorkspace.selectedRepoId,
-    setSelectedRepoId: repositoriesWorkspace.setSelectedRepoId,
-    setError,
-    setStatusMessage,
-  });
-  const patchChecksWorkspace = usePatchChecksWorkspace({
-    locale,
-    selectedRepoId: repositoriesWorkspace.selectedRepoId,
-    selectedRepository: repositoriesWorkspace.selectedRepository,
-    setSelectedRepoId: repositoriesWorkspace.setSelectedRepoId,
-    setError,
-    setStatusMessage,
-  });
-
-  const selectedRepository = repositoriesWorkspace.selectedRepository;
-  const citationCount = chatWorkspace.chatResponse?.citations.length ?? 0;
-  const checkCount = patchChecksWorkspace.checkProfiles.length;
-  const hasChatHistory = chatWorkspace.chatHistory.length > 0;
-  const hasChatResponse = Boolean(chatWorkspace.chatResponse);
-
-  const tabs: WorkspaceTab[] = [
-    {
-      id: "chat",
-      label: copy.workspace.tabs.chat.label,
-      hint: copy.workspace.tabs.chat.hint,
-      count: hasChatResponse ? citationCount : undefined,
-    },
-    {
-      id: "patch",
-      label: copy.workspace.tabs.patch.label,
-      hint: copy.workspace.tabs.patch.hint,
-      count: patchChecksWorkspace.patchBatchResponse?.changed_file_count,
-    },
-    {
-      id: "checks",
-      label: copy.workspace.tabs.checks.label,
-      hint: copy.workspace.tabs.checks.hint,
-      count: checkCount > 0 ? checkCount : undefined,
-    },
+function RepositorySession({ repository, locale, modelConfigured, repositories, onSelect, setError, setStatusMessage }: {
+  repository: RepositoryRecord;
+  locale: WorkspaceLocale;
+  modelConfigured: boolean;
+  repositories: ReturnType<typeof useWorkspaceRepositories>;
+  onSelect: (id: number | null) => void;
+  setError: (message: string | null) => void;
+  setStatusMessage: (message: string | null) => void;
+}) {
+  const en = locale === "en";
+  const [view, setView] = useState<View>("read");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSidebarOpen(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, []);
+  const reader = useRepositoryReader(repository, locale);
+  const common = { locale, selectedRepoId: repository.id, setSelectedRepoId: onSelect, setError, setStatusMessage };
+  const chat = useChatWorkspace({ ...common, repositories: repositories.repositories });
+  const changes = usePatchChecksWorkspace({ ...common, selectedRepository: repository });
+  const tabs = [
+    { id: "read" as const, label: en ? "Read" : "阅读", icon: BookOpen },
+    { id: "chat" as const, label: en ? "Ask" : "问答", icon: MessageSquare },
+    { id: "patch" as const, label: en ? "Changes" : "改动", icon: FilePenLine },
+    { id: "checks" as const, label: en ? "Checks" : "检查", icon: ListChecks },
   ];
-
-  const activeTab = tabs.find((tab) => tab.id === activeView) ?? tabs[0];
-  const toastCopy =
-    locale === "zh-CN"
-      ? { close: "关闭提示" }
-      : { close: "Dismiss notification" };
-  const drawerCopy =
-    locale === "zh-CN"
-      ? { open: "仓库与任务", close: "关闭侧栏" }
-      : { open: "Repos and jobs", close: "Close sidebar" };
-  const stageGuideCopy =
-    locale === "zh-CN"
-      ? {
-          label: "建议下一步",
-          selectRepo: "先选择一个仓库，工作流才能继续。",
-          waitClone: "仓库还在克隆中，完成后就可以开始索引。",
-          indexRepo: "这个仓库还没有可用索引，先建立索引再继续问答和改动。",
-          indexing: "索引任务已经在跑了，完成后就可以进入问答和改动流程。",
-          askQuestion: "仓库已经准备好了，下一步最自然的是先提一个问题缩小范围。",
-          reviewPatch: "草案已经生成，建议先审一遍 diff，再决定是否应用或验证。",
-          runChecks: "改动已经落到工作区，下一步建议运行检查确认没有破坏现有行为。",
-          continueChat: "检查结果已经出来了，可以回到问答继续排查或解释失败原因。",
-          openChat: "去问答",
-          openPatch: "去改动草案",
-          openChecks: "去检查验证",
-          startIndex: "开始索引",
-        }
-      : {
-          label: "Suggested next step",
-          selectRepo: "Select a repository first so the workflow can continue.",
-          waitClone: "This repository is still cloning. Once it finishes, you can index it.",
-          indexRepo: "This repository is not indexed yet. Build the index before chat or patch work.",
-          indexing:
-            "Indexing is already running. When it finishes, the workspace will be ready for chat and patch flows.",
-          askQuestion: "This repository is ready. The best next step is usually to ask a focused question.",
-          reviewPatch: "A patch draft is ready. Review the diff before you apply or verify it.",
-          runChecks: "Changes were written to the workspace. Run checks next to confirm behavior still holds.",
-          continueChat: "Checks finished. Return to chat if you want to explain failures or continue debugging.",
-          openChat: "Open chat",
-          openPatch: "Open patch draft",
-          openChecks: "Open checks",
-          startIndex: "Start indexing",
-        };
-  const stageGuide = (() => {
-    if (!selectedRepository) {
-      return { title: stageGuideCopy.label, body: stageGuideCopy.selectRepo };
-    }
-    if (selectedRepository.status === "cloning") {
-      return { title: stageGuideCopy.label, body: stageGuideCopy.waitClone };
-    }
-    if (!selectedRepository.root_path || selectedRepository.status === "pending") {
-      return {
-        title: stageGuideCopy.label,
-        body: stageGuideCopy.indexRepo,
-        actionLabel: stageGuideCopy.startIndex,
-        action: () => void repositoriesWorkspace.handleIndexRepository(selectedRepository.id),
-        disabled: Boolean(repositoriesWorkspace.indexingRepoId || repositoriesWorkspace.importingRepoId),
-      };
-    }
-    if (selectedRepository.status === "indexing") {
-      return { title: stageGuideCopy.label, body: stageGuideCopy.indexing };
-    }
-    if (
-      (patchChecksWorkspace.patchResponse && patchChecksWorkspace.patchResponse.repo_id === selectedRepository.id) ||
-      (patchChecksWorkspace.patchBatchResponse &&
-        patchChecksWorkspace.patchBatchResponse.repo_id === selectedRepository.id)
-    ) {
-      return {
-        title: stageGuideCopy.label,
-        body: stageGuideCopy.reviewPatch,
-        actionLabel: stageGuideCopy.openPatch,
-        action: () => setActiveView("patch"),
-      };
-    }
-    if (
-      (patchChecksWorkspace.patchApplyResponse &&
-        patchChecksWorkspace.patchApplyResponse.repo_id === selectedRepository.id) ||
-      (patchChecksWorkspace.patchBatchApplyResponse &&
-        patchChecksWorkspace.patchBatchApplyResponse.repo_id === selectedRepository.id)
-    ) {
-      return {
-        title: stageGuideCopy.label,
-        body: stageGuideCopy.runChecks,
-        actionLabel: stageGuideCopy.openChecks,
-        action: () => setActiveView("checks"),
-      };
-    }
-    if (
-      patchChecksWorkspace.checkResponse &&
-      patchChecksWorkspace.checkResponse.repo_id === selectedRepository.id
-    ) {
-      return {
-        title: stageGuideCopy.label,
-        body: stageGuideCopy.continueChat,
-        actionLabel: stageGuideCopy.openChat,
-        action: () => setActiveView("chat"),
-      };
-    }
-    return {
-      title: stageGuideCopy.label,
-      body: stageGuideCopy.askQuestion,
-      actionLabel: stageGuideCopy.openChat,
-      action: () => setActiveView("chat"),
-    };
-  })();
-
-  useEffect(() => {
-    if (!error) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setError(null);
-    }, 5200);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [error]);
-
-  useEffect(() => {
-    if (!statusMessage) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setStatusMessage(null);
-    }, 3600);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [statusMessage]);
-
-  return (
-    <main className="page-shell page-shell--workspace">
-      <section className="workspace-topbar">
-        <div className="workspace-title-block">
-          <div className="workspace-title-row">
-            <p className="eyebrow">{copy.workspace.eyebrow}</p>
-            <label className="locale-switcher">
-              <span className="locale-switcher-label">{copy.workspace.localeLabel}</span>
-              <div className="locale-switcher-options">
-                {localeOptions.map((option) => (
-                  <button
-                    className={`locale-option ${locale === option.value ? "is-active" : ""}`.trim()}
-                    key={option.value}
-                    onClick={() => setLocale(option.value)}
-                    type="button"
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </label>
-          </div>
-          <h1 className="workspace-title">{copy.workspace.title}</h1>
-          <p className="workspace-subtitle">{copy.workspace.subtitle}</p>
-        </div>
-        <div className="workspace-overview">
-          <article className="workspace-metric">
-            <div className="workspace-metric-label">{copy.workspace.backend}</div>
-            <div className="workspace-metric-value">
-              {formatHealthStatus(locale, repositoriesWorkspace.health?.status ?? "waiting")}
-            </div>
-          </article>
-          <article className="workspace-metric">
-            <div className="workspace-metric-label">{copy.workspace.readyRepos}</div>
-            <div className="workspace-metric-value">
-              {repositoriesWorkspace.readyRepositories.length}
-            </div>
-          </article>
-          <article className="workspace-metric">
-            <div className="workspace-metric-label">{copy.workspace.recentSessions}</div>
-            <div className="workspace-metric-value">{chatWorkspace.chatHistory.length}</div>
-          </article>
-        </div>
-      </section>
-
-      {error ? (
-        <div className="workspace-toast-stack" role="status">
-          <div className="error-banner toast-banner">
-            <div>{error}</div>
-            <button
-              aria-label={toastCopy.close}
-              className="toast-close"
-              onClick={() => setError(null)}
-              type="button"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {statusMessage ? (
-        <div className="workspace-toast-stack" role="status">
-          <div className="success-banner toast-banner">
-            <div>{statusMessage}</div>
-            <button
-              aria-label={toastCopy.close}
-              className="toast-close"
-              onClick={() => setStatusMessage(null)}
-              type="button"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <section className="workspace-layout">
-        <button
-          aria-expanded={isSidebarOpen}
-          className="workspace-sidebar-toggle"
-          onClick={() => setIsSidebarOpen(true)}
-          type="button"
-        >
-          {drawerCopy.open}
-        </button>
-        {isSidebarOpen ? (
-          <button
-            aria-label={drawerCopy.close}
-            className="workspace-sidebar-backdrop"
-            onClick={() => setIsSidebarOpen(false)}
-            type="button"
-          />
-        ) : null}
-        <aside className={`workspace-sidebar ${isSidebarOpen ? "is-open" : ""}`.trim()}>
-          <div className="workspace-sidebar-mobile-bar">
-            <div className="focus-card-label">{drawerCopy.open}</div>
-            <button className="button-secondary compact-button" onClick={() => setIsSidebarOpen(false)} type="button">
-              {drawerCopy.close}
-            </button>
-          </div>
-          <section className="panel-card context-card">
-            <div className="context-card-header">
-              <div>
-                <p className="context-eyebrow">{copy.workspace.currentRepository}</p>
-                <h2 className="context-title">
-                  {selectedRepository?.name ?? copy.workspace.noRepositorySelected}
-                </h2>
-              </div>
-              <span className={`status-pill ${selectedRepository ? "" : "is-muted"}`.trim()}>
-                {selectedRepository
-                  ? formatRepositoryStatus(locale, selectedRepository.status)
-                  : copy.workspace.notSelected}
-              </span>
-            </div>
-            <p className="context-path">
-              {selectedRepository?.root_path ??
-                selectedRepository?.source_url ??
-                copy.workspace.selectRepositoryHint}
-            </p>
-            <div className="context-meta-grid">
-              <div className="context-meta-card">
-                <div className="context-meta-label">{copy.workspace.language}</div>
-                <div className="context-meta-value">
-                  {selectedRepository?.primary_language ?? copy.workspace.unknown}
-                </div>
-              </div>
-              <div className="context-meta-card">
-                <div className="context-meta-label">{copy.workspace.source}</div>
-                <div className="context-meta-value">
-                  {selectedRepository
-                    ? formatRepositorySource(locale, selectedRepository.source_type)
-                    : copy.workspace.notSelected}
-                </div>
-              </div>
-            </div>
-            {repositoriesWorkspace.meta?.features?.length ? (
-              <div className="hero-badges compact-badges">
-                {repositoriesWorkspace.meta.features.map((feature) => (
-                  <span className="signal-pill" key={feature}>
-                    {formatFeature(locale, feature)}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </section>
-
-          <RepositoryImportForm isSubmitting={repositoriesWorkspace.isSubmitting} locale={locale} onSubmit={repositoriesWorkspace.handleRepositorySubmit} />
-          <RepositoryList
-            importingRepoId={repositoriesWorkspace.importingRepoId}
-            indexingRepoId={repositoriesWorkspace.indexingRepoId}
-            isLoading={repositoriesWorkspace.isLoading}
-            locale={locale}
-            onIndex={repositoriesWorkspace.handleIndexRepository}
-            onSelect={(repoId) => {
-              repositoriesWorkspace.setSelectedRepoId(repoId);
-              setIsSidebarOpen(false);
-            }}
-            repositories={repositoriesWorkspace.repositories}
-            selectedRepoId={repositoriesWorkspace.selectedRepoId}
-          />
-          <JobActivityPanel
-            jobs={repositoriesWorkspace.recentJobs}
-            locale={locale}
-            onRetry={repositoriesWorkspace.handleRetryJob}
-            onSelectRepository={(repoId) => {
-              repositoriesWorkspace.setSelectedRepoId(repoId);
-              setIsSidebarOpen(false);
-            }}
-            repositories={repositoriesWorkspace.repositories}
-            retryingJobId={repositoriesWorkspace.retryingJobId}
-            selectedRepoId={repositoriesWorkspace.selectedRepoId}
-          />
-          {hasChatHistory ? (
-            <ChatHistoryPanel
-              activeSessionId={chatWorkspace.chatResponse?.session_id ?? null}
-              entries={chatWorkspace.chatHistory}
-              locale={locale}
-              onSelectSession={(entry) => {
-                chatWorkspace.handleSelectHistory(entry);
-                setIsSidebarOpen(false);
-              }}
-            />
-          ) : null}
-        </aside>
-
-        <section className="workspace-main">
-          <section className="panel-card workflow-guide-card">
-            <div className="answer-header">
-              <div>
-                <div className="focus-card-label">{stageGuide.title}</div>
-                <div className="focus-card-title">
-                  {selectedRepository?.name ?? copy.workspace.noRepositorySelected}
-                </div>
-              </div>
-              {stageGuide.actionLabel ? (
-                <button
-                  className="button-primary"
-                  disabled={stageGuide.disabled}
-                  onClick={stageGuide.action}
-                  type="button"
-                >
-                  {stageGuide.actionLabel}
-                </button>
-              ) : null}
-            </div>
-            <div className="focus-card-copy">{stageGuide.body}</div>
-          </section>
-
-          <section className="panel-card stage-frame">
-            <div className="stage-frame-header">
-              <div className="stage-frame-copyblock">
-                <p className="context-eyebrow">{copy.workspace.activeStage}</p>
-                <h2 className="stage-frame-title">{activeTab.label}</h2>
-                <p className="stage-frame-copy">{activeTab.hint}</p>
-              </div>
-              <div aria-label="Workspace stages" className="view-tabs" role="tablist">
-                {tabs.map((tab) => (
-                  <button
-                    aria-selected={tab.id === activeView}
-                    className={`view-tab ${tab.id === activeView ? "is-active" : ""}`.trim()}
-                    key={tab.id}
-                    onClick={() => setActiveView(tab.id)}
-                    role="tab"
-                    type="button"
-                  >
-                    <span>{tab.label}</span>
-                    {tab.count ? <span className="view-tab-badge">{tab.count}</span> : null}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {activeView === "chat" ? (
-            <div className={`workspace-stage-grid ${hasChatResponse ? "" : "is-single"}`.trim()}>
-              <div className="workspace-stage-primary">
-                <ChatPanel
-                  historyCount={chatWorkspace.chatHistory.length}
-                  isAsking={chatWorkspace.isAsking}
-                  locale={locale}
-                  onAsk={chatWorkspace.handleAsk}
-                  onOpenChecks={() => setActiveView("checks")}
-                  onOpenPatch={() => setActiveView("patch")}
-                  onSelectRepo={repositoriesWorkspace.setSelectedRepoId}
-                  repositories={repositoriesWorkspace.repositories}
-                  response={chatWorkspace.chatResponse}
-                  selectedRepoId={repositoriesWorkspace.selectedRepoId}
-                />
-              </div>
-              {hasChatResponse ? (
-                <div className="workspace-stage-secondary">
-                  <CitationPanel locale={locale} response={chatWorkspace.chatResponse} />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {activeView === "patch" ? (
-            <PatchDraftPanel
-              applyResponse={patchChecksWorkspace.patchApplyResponse}
-              batchApplyResponse={patchChecksWorkspace.patchBatchApplyResponse}
-              batchResponse={patchChecksWorkspace.patchBatchResponse}
-              isApplying={patchChecksWorkspace.isApplyingPatch}
-              isApplyingAndChecking={patchChecksWorkspace.isApplyingAndChecking}
-              isApplyingBatch={patchChecksWorkspace.isApplyingBatchPatch}
-              isApplyingBatchAndChecking={patchChecksWorkspace.isApplyingBatchAndChecking}
-              isDrafting={patchChecksWorkspace.isDraftingPatch}
-              locale={locale}
-              onApply={patchChecksWorkspace.handleApplyPatch}
-              onApplyAndCheck={patchChecksWorkspace.handleApplyPatchAndRunChecks}
-              onApplyBatch={patchChecksWorkspace.handleApplyPatchBatch}
-              onApplyBatchAndCheck={patchChecksWorkspace.handleApplyPatchBatchAndRunChecks}
-              onDraft={patchChecksWorkspace.handleDraftPatch}
-              onOpenChat={() => setActiveView("chat")}
-              onOpenChecks={() => setActiveView("checks")}
-              recommendedCheckCount={patchChecksWorkspace.recommendedCheckCount}
-              response={patchChecksWorkspace.patchResponse}
-              selectedRepository={selectedRepository}
-              suggestedPath={chatWorkspace.suggestedPatchPath}
-            />
-          ) : null}
-
-          {activeView === "checks" ? (
-            <ChecksPanel
-              isLoadingProfiles={patchChecksWorkspace.isLoadingCheckProfiles}
-              isLoadingRecommendation={patchChecksWorkspace.isLoadingCheckRecommendation}
-              isRunningChecks={patchChecksWorkspace.isRunningChecks}
-              locale={locale}
-              onOpenChat={() => setActiveView("chat")}
-              onOpenPatch={() => setActiveView("patch")}
-              onRunChecks={patchChecksWorkspace.handleRunChecks}
-              patchApplyResponse={patchChecksWorkspace.patchApplyResponse}
-              profiles={patchChecksWorkspace.checkProfiles}
-              recommendation={patchChecksWorkspace.checkRecommendation}
-              response={patchChecksWorkspace.checkResponse}
-              selectedRepository={selectedRepository}
-            />
-          ) : null}
-        </section>
-      </section>
-      <nav className="workspace-mobile-dock" aria-label="Workspace mobile navigation">
-        <button className="workspace-mobile-dock-button" onClick={() => setIsSidebarOpen(true)} type="button">
-          {drawerCopy.open}
-        </button>
-        {tabs.map((tab) => (
-          <button
-            className={`workspace-mobile-dock-button ${tab.id === activeView ? "is-active" : ""}`.trim()}
-            key={tab.id}
-            onClick={() => setActiveView(tab.id)}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-    </main>
-  );
+  function openSource(target: SourceTarget) { setView("read"); setSidebarOpen(false); void reader.openSource(target); }
+  const questionPanel = <>
+    <ChatPanel repository={repository} isAsking={chat.isAsking} modelConfigured={modelConfigured} locale={locale}
+      onAsk={chat.handleAsk} onOpenPatch={() => setView("patch")} onOpenChecks={() => setView("checks")} response={chat.chatResponse} />
+    {chat.chatResponse ? <CitationPanel locale={locale} response={chat.chatResponse} onOpenSource={openSource} /> : null}
+  </>;
+  return <>
+    <nav className="workspace-nav" aria-label={en ? "Workspace views" : "工作区视图"}>
+      <button className="icon-button sidebar-toggle" aria-expanded={sidebarOpen} title={en ? "Files and jobs" : "文件与任务"} aria-label={en ? "Files and jobs" : "文件与任务"}
+        onClick={() => setSidebarOpen(!sidebarOpen)}><Menu size={18} /></button>
+      {tabs.map(({ id, label, icon: Icon }) => <button key={id} className={`workspace-tab ${view === id ? "active" : ""}`} aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}><Icon size={16} />{label}</button>)}
+      <span className="repository-status">{formatRepositoryStatus(locale, repository.status)}</span>
+      <button className="button-secondary index-button" disabled={!repository.root_path || Boolean(repositories.indexingRepoId || repositories.importingRepoId)}
+        onClick={() => void repositories.handleIndexRepository(repository.id)}>{repository.status === "ready" ? (en ? "Reindex" : "重新索引") : (en ? "Index repository" : "开始索引")}</button>
+    </nav>
+    <div className={`reading-layout view-${view}`}>
+      {sidebarOpen ? <button className="drawer-backdrop" aria-label={en ? "Close files" : "关闭文件栏"} onClick={() => setSidebarOpen(false)} /> : null}
+      <aside className={`file-sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="sidebar-context"><strong>{repository.name}</strong><span className="muted">{repository.primary_language ?? repository.source_type}</span></div>
+        {repository.root_path ? <RepositoryTree reader={reader} locale={locale} onOpenSource={openSource} /> : <p className="empty-state">{en ? "Waiting for clone" : "等待克隆完成"}</p>}
+        <details className="sidebar-details"><summary>{en ? "Jobs" : "任务"}</summary><JobActivityPanel jobs={repositories.recentJobs} locale={locale} onRetry={repositories.handleRetryJob}
+          onSelectRepository={onSelect} repositories={repositories.repositories} retryingJobId={repositories.retryingJobId} selectedRepoId={repository.id} /></details>
+        {chat.chatHistory.length ? <details className="sidebar-details"><summary>{en ? "Questions" : "历史提问"}</summary><ChatHistoryPanel activeSessionId={chat.chatResponse?.session_id ?? null}
+          entries={chat.chatHistory} locale={locale} onSelectSession={chat.handleSelectHistory} /></details> : null}
+      </aside>
+      {view === "read" ? <><RepositoryReader reader={reader} locale={locale} indexed={repository.status === "ready"} /><aside className="question-sidebar">{questionPanel}</aside></> : null}
+      {view === "chat" ? <div className="full-panel chat-view">{questionPanel}</div> : null}
+      {view === "patch" ? <div className="full-panel"><PatchDraftPanel modelConfigured={modelConfigured} applyResponse={changes.patchApplyResponse} batchApplyResponse={changes.patchBatchApplyResponse}
+        batchResponse={changes.patchBatchResponse} isApplying={changes.isApplyingPatch} isApplyingAndChecking={changes.isApplyingAndChecking} isApplyingBatch={changes.isApplyingBatchPatch}
+        isApplyingBatchAndChecking={changes.isApplyingBatchAndChecking} isDrafting={changes.isDraftingPatch} locale={locale} onApply={changes.handleApplyPatch}
+        onApplyAndCheck={changes.handleApplyPatchAndRunChecks} onApplyBatch={changes.handleApplyPatchBatch} onApplyBatchAndCheck={changes.handleApplyPatchBatchAndRunChecks}
+        onDraft={changes.handleDraftPatch} onOpenChat={() => setView("chat")} onOpenChecks={() => setView("checks")} recommendedCheckCount={changes.recommendedCheckCount}
+        response={changes.patchResponse} selectedRepository={repository} suggestedPath={reader.source?.path ?? chat.suggestedPatchPath} /></div> : null}
+      {view === "checks" ? <div className="full-panel"><ChecksPanel isLoadingProfiles={changes.isLoadingCheckProfiles} isLoadingRecommendation={changes.isLoadingCheckRecommendation}
+        isRunningChecks={changes.isRunningChecks} locale={locale} onOpenChat={() => setView("chat")} onOpenPatch={() => setView("patch")}
+        onRunChecks={changes.handleRunChecks} patchApplyResponse={changes.patchApplyResponse} profiles={changes.checkProfiles} recommendation={changes.checkRecommendation}
+        response={changes.checkResponse} selectedRepository={repository} /></div> : null}
+    </div>
+  </>;
 }

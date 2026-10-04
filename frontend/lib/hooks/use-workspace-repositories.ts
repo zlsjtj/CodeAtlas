@@ -151,8 +151,10 @@ export function useWorkspaceRepositories({
         setSelectedRepoId(created.id);
         setStatusMessage(copy.feedback.repositoryRegistered(created.name));
       }
+      return true;
     } catch (submitError) {
       setError(toErrorMessage(submitError, copy.feedback.registerRepository));
+      return false;
     } finally {
       setIsSubmitting(false);
     }

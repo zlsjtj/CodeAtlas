@@ -787,6 +787,11 @@ export interface components {
             api_prefix: string;
             /** Features */
             features: string[];
+            /**
+             * Model Configured
+             * @default false
+             */
+            model_configured: boolean;
         };
         /** PatchApplyAndCheckRequest */
         PatchApplyAndCheckRequest: {
@@ -1384,7 +1389,9 @@ export interface operations {
     get_repository_api_repositories__repo_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path: {
                 repo_id: number;
             };
@@ -1451,7 +1458,9 @@ export interface operations {
     get_index_status_api_repositories__repo_id__index_status_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path: {
                 repo_id: number;
             };
@@ -1616,7 +1625,9 @@ export interface operations {
     get_job_api_jobs__job_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Response-Language"?: string | null;
+            };
             path: {
                 job_id: number;
             };

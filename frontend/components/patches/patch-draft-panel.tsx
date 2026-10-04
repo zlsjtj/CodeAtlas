@@ -19,6 +19,7 @@ import {
 } from "@/lib/workspace-i18n";
 
 type PatchDraftPanelProps = {
+  modelConfigured: boolean;
   selectedRepository: RepositoryRecord | null;
   suggestedPath: string | null;
   isDrafting: boolean;
@@ -234,6 +235,7 @@ function PatchDraftFileCard({
 }
 
 export function PatchDraftPanel({
+  modelConfigured,
   selectedRepository,
   suggestedPath,
   isDrafting,
@@ -269,12 +271,8 @@ export function PatchDraftPanel({
           fileScope: "File scope",
         };
   const [targetPathsInput, setTargetPathsInput] = useState("");
-  const [instruction, setInstruction] = useState(copy.patch.defaultInstruction);
+  const [instruction, setInstruction] = useState("");
   const [selectedBatchPaths, setSelectedBatchPaths] = useState<string[]>([]);
-
-  useEffect(() => {
-    setInstruction(copy.patch.defaultInstruction);
-  }, [copy.patch.defaultInstruction]);
 
   useEffect(() => {
     setTargetPathsInput("");
@@ -327,6 +325,7 @@ export function PatchDraftPanel({
     <section className="panel-card">
       <h2 className="panel-title">{copy.patch.title}</h2>
       <p className="panel-copy">{copy.patch.description}</p>
+      {!modelConfigured ? <p className="notice">{locale === "en" ? "Model configuration is missing. Draft generation is unavailable." : "未配置模型，暂不能生成草案。"}</p> : null}
 
       {!selectedRepository ? (
         <div className="placeholder-card">
@@ -399,7 +398,7 @@ export function PatchDraftPanel({
           <div className="button-row">
             <button
               className="button-primary"
-              disabled={isDrafting || parsedTargetPaths.length === 0 || !instruction.trim()}
+              disabled={!modelConfigured || isDrafting || parsedTargetPaths.length === 0 || !instruction.trim()}
               type="submit"
             >
               {isDrafting

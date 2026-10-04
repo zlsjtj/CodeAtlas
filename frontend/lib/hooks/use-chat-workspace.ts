@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRepositoryRequest } from "./use-repository-request";
 
 import { askRepositoryQuestion } from "@/lib/api";
 import type { ChatAskResponse, RepositoryRecord, WorkspaceChatEntry } from "@/lib/types";
@@ -26,12 +27,15 @@ export function useChatWorkspace({
   setStatusMessage,
 }: UseChatWorkspaceOptions) {
   const copy = getWorkspaceCopy(locale);
+  const captureRequest = useRepositoryRequest(selectedRepoId);
   const [chatResponse, setChatResponse] = useState<ChatAskResponse | null>(null);
   const [chatHistory, setChatHistory] = useState<WorkspaceChatEntry[]>([]);
   const [activeChatRepoId, setActiveChatRepoId] = useState<number | null>(null);
   const [isAsking, setIsAsking] = useState(false);
+  useEffect(() => { setIsAsking(false); }, [selectedRepoId]);
 
   async function handleAsk(repoId: number, question: string) {
+    const isCurrent = captureRequest();
     setIsAsking(true);
     setError(null);
     setStatusMessage(null);
@@ -42,6 +46,7 @@ export function useChatWorkspace({
         question,
         response_language: locale,
       });
+      if (!isCurrent()) return;
       const repository = repositories.find((item) => item.id === repoId);
       setChatResponse(response);
       setActiveChatRepoId(repoId);
@@ -63,9 +68,10 @@ export function useChatWorkspace({
       );
       setStatusMessage(copy.feedback.answerReady);
     } catch (askError) {
+      if (!isCurrent()) return;
       setError(toErrorMessage(askError, copy.feedback.askRepository));
     } finally {
-      setIsAsking(false);
+      if (isCurrent()) setIsAsking(false);
     }
   }
 
@@ -81,7 +87,7 @@ export function useChatWorkspace({
     activeChatRepoId === selectedRepoId ? chatResponse?.citations[0]?.path ?? null : null;
 
   return {
-    chatResponse,
+    chatResponse: activeChatRepoId === selectedRepoId ? chatResponse : null,
     chatHistory,
     isAsking,
     citedSessionCount,

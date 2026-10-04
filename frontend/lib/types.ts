@@ -12,6 +12,8 @@ export type CheckStatus = ApiSchema<"CheckRunResponse">["status"];
 
 export type HealthResponse = ApiSchema<"HealthResponse">;
 export type MetaResponse = ApiSchema<"MetaResponse">;
+export type ToolResultItem = ApiSchema<"ToolResultItem">;
+export type ToolExecutionResponse = ApiSchema<"ToolExecutionResponse">;
 
 export type RepositoryRecord = ApiSchema<"RepositoryRead">;
 export type RepositoryListResponse = ApiSchema<"RepositoryListResponse">;
