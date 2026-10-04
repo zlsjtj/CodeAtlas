@@ -2,53 +2,87 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  backend:
-    name: Backend tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+  native:
+    name: Native / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install backend dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
-
-      - name: Run backend tests
-        run: python -m pytest
-
-  frontend:
-    name: Frontend typecheck
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - run: npm run setup
+      - run: npm run test:startup
+      - name: Backend regression
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            backend/.venv/Scripts/python.exe -m pytest backend/tests -q
+          else
+            backend/.venv/bin/python -m pytest backend/tests -q
+          fi
+      - name: Native startup and no-key search
+        run: npm run smoke
+      - name: Generated API types
+        if: runner.os == 'Linux'
+        working-directory: frontend
+        run: |
+          npm run generate:api-types
+          git diff --exit-code -- lib/generated/api-types.ts
+      - name: Frontend typecheck and production build
+        working-directory: frontend
+        run: |
+          npm run typecheck
+          npm run build
+      - name: Browser tests
+        if: runner.os == 'Linux'
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure() && runner.os == 'Linux'
+        with:
+          name: browser-test-failure
+          path: |
+            frontend/test-results
+            frontend/playwright-report
 
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Run frontend typecheck
-        run: npm run typecheck
+  docker:
+    name: Docker / Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build and start healthy containers
+        run: docker compose up --build --wait --wait-timeout 180
+      - run: node scripts/docker-smoke.mjs
+      - name: Recreate containers with existing volumes
+        run: |
+          docker compose down
+          docker compose up --wait --wait-timeout 120
+          node scripts/docker-smoke.mjs --persisted
+      - name: Container logs
+        if: failure()
+        run: docker compose logs
+      - name: Clean up CI volumes
+        if: always()
+        run: docker compose down --volumes

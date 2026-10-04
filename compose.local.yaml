@@ -1,0 +1,7 @@
+# Explicit opt-in mount for a trusted local repository. Not loaded by default.
+services:
+  backend:
+    volumes:
+      - type: bind
+        source: ${CODEATLAS_SOURCE_DIR:?Set CODEATLAS_SOURCE_DIR to one trusted repository}
+        target: /workspace/source

@@ -1,0 +1,12 @@
+{
+  "name": "codeatlas",
+  "private": true,
+  "version": "0.1.0",
+  "engines": { "node": ">=20.12" },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/dev.mjs",
+    "smoke": "node scripts/dev.mjs --smoke",
+    "test:startup": "node --test scripts/startup.test.mjs"
+  }
+}

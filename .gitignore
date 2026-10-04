@@ -11,9 +11,13 @@ backend/.venv/
 frontend/node_modules/
 frontend/.next/
 *.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+frontend/*-run.log
 
 # Local environment
 .env
+frontend/.env.local
 .DS_Store
 Thumbs.db
 
