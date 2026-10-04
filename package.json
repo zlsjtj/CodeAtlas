@@ -6,7 +6,8 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "dev": "node scripts/dev.mjs",
+    "demo": "node scripts/dev.mjs --demo",
     "smoke": "node scripts/dev.mjs --smoke",
-    "test:startup": "node --test scripts/startup.test.mjs"
+    "test:startup": "node --test scripts/startup.test.mjs scripts/demo.test.mjs"
   }
 }

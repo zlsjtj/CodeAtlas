@@ -1,11 +1,14 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { availablePort, backend, checkNode, frontend, frontendEnvironment, root, stopChild, venvPython } from "./runtime.mjs";
+import { clickExample, indexExample, prepareExample } from "./demo.mjs";
 
 const smoke = process.argv.includes("--smoke");
 const strict = process.argv.includes("--strict-ports");
+const demo = process.argv.includes("--demo");
+const controller = new AbortController();
 const children = [];
 let stopping = false;
 let temporary;
@@ -14,6 +17,7 @@ let exitCode = 0;
 function stop(code = 0) {
   if (stopping) return;
   stopping = true;
+  controller.abort();
   exitCode = code;
   for (const child of children) stopChild(child);
 }
@@ -41,12 +45,27 @@ try {
   checkNode();
   if (!existsSync(venvPython) || !existsSync(path.join(frontend, "node_modules/next/dist/bin/next"))) throw new Error("Dependencies are missing. Run npm run setup first.");
   if (existsSync(path.join(root, ".env"))) process.loadEnvFile(path.join(root, ".env"));
+  process.on("SIGINT", () => stop());
+  process.on("SIGTERM", () => stop());
+  let exampleRoot;
+  if (demo) {
+    console.log(`Preparing pallets/click at ${clickExample.commit}. No model calls or repository scripts.`);
+    exampleRoot = await prepareExample(path.join(root, "repos/examples"), clickExample, controller.signal);
+  }
   const backendPort = await availablePort(process.env.CODEATLAS_BACKEND_PORT ?? 8000, strict);
   let frontendPort = await availablePort(process.env.CODEATLAS_FRONTEND_PORT ?? 3000, strict);
   if (frontendPort === backendPort) frontendPort = await availablePort(frontendPort + 1, strict);
   const apiUrl = `http://127.0.0.1:${backendPort}`;
   const webUrl = `http://127.0.0.1:${frontendPort}`;
   const env = { ...process.env, CODE_AGENT_CORS_ORIGINS: JSON.stringify([webUrl]), PYTHONUNBUFFERED: "1" };
+  if (demo) {
+    const demoData = path.join(root, "data/demo");
+    mkdirSync(demoData, { recursive: true });
+    env.CODE_AGENT_DATABASE_URL = `sqlite:///${path.join(demoData, "atlas.db").replaceAll("\\", "/")}`;
+    env.CODE_AGENT_DATA_DIR = demoData;
+    env.CODE_AGENT_REPOS_DIR = path.join(root, "repos/examples");
+    env.OPENAI_API_KEY = "";
+  }
   if (smoke) {
     temporary = mkdtempSync(path.join(tmpdir(), "codeatlas-smoke-"));
     env.CODE_AGENT_DATABASE_URL = `sqlite:///${path.join(temporary, "test.db").replaceAll("\\", "/")}`;
@@ -54,13 +73,13 @@ try {
     env.CODE_AGENT_REPOS_DIR = path.join(temporary, "repos");
     env.OPENAI_API_KEY = "";
   }
-  process.on("SIGINT", () => stop());
-  process.on("SIGTERM", () => stop());
   start(venvPython, ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", String(backendPort)], backend, env);
   await ready(`${apiUrl}/api/health`);
+  if (demo) await indexExample(apiUrl, exampleRoot, controller.signal);
   start(process.execPath, [path.join(frontend, "node_modules/next/dist/bin/next"), "dev", "--hostname", "127.0.0.1", "--port", String(frontendPort)], frontend, frontendEnvironment(env, apiUrl));
   await ready(webUrl);
-  console.log(`\nCodeAtlas: ${webUrl}\nAPI docs: ${apiUrl}/docs\nTry importing: ${frontend}\n`);
+  console.log(`\nCodeAtlas: ${webUrl}\nAPI docs: ${apiUrl}/docs\n`);
+  console.log(demo ? `Click is indexed. Search for callback=f to follow the command decorator.\nExample: ${exampleRoot}\n` : `Try importing: ${frontend}\n`);
   if (smoke) {
     const meta = await fetch(`${apiUrl}/api/meta`, { headers: { Origin: webUrl } });
     if (meta.headers.get("access-control-allow-origin") !== webUrl) throw new Error("Selected frontend port is not allowed by CORS.");
@@ -70,10 +89,16 @@ try {
       if (!response.ok) throw new Error(`${route}: HTTP ${response.status}`);
       return response.json();
     };
-    const repository = await post("/api/repositories", { source_type: "local", root_path: frontend });
-    await post(`/api/repositories/${repository.id}/index`, {});
-    const symbols = await post("/api/tools/find-symbol", { repo_id: repository.id, name: "WorkspaceShell" });
-    if (!symbols.items.some((item) => item.path === "components/workspace-shell.tsx")) throw new Error("WorkspaceShell was not found.");
+    if (demo) {
+      const first = await indexExample(apiUrl, exampleRoot, controller.signal);
+      const repeated = await indexExample(apiUrl, exampleRoot, controller.signal);
+      if (first.id !== repeated.id) throw new Error("Repeated example setup created a duplicate repository.");
+    } else {
+      const repository = await post("/api/repositories", { source_type: "local", root_path: frontend });
+      await post(`/api/repositories/${repository.id}/index`, {});
+      const symbols = await post("/api/tools/find-symbol", { repo_id: repository.id, name: "WorkspaceShell" });
+      if (!symbols.items.some((item) => item.path === "components/workspace-shell.tsx")) throw new Error("WorkspaceShell was not found.");
+    }
     console.log("SMOKE PASS: frontend, backend, indexing, symbol lookup; no model calls.");
     stop();
   }

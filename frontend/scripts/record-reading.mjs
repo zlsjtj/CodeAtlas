@@ -1,81 +1,127 @@
 import { chromium, expect } from "@playwright/test";
-import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { clickExample, indexExample, prepareExample } from "../../scripts/demo.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
-const folder = path.join(root, "repos/click-demo");
-const output = path.join(root, "data/recording");
-const cases = JSON.parse(readFileSync(path.join(root, "benchmarks/reading-cases.json"), "utf8"));
-const commit = execFileSync("git", ["-C", folder, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-if (commit !== cases.repositories[1].commit) throw new Error("Click checkout does not match the case manifest.");
+const folder = await prepareExample(path.join(root, "repos/examples"));
+const recordingRoot = path.join(root, "data/recording");
+const output = path.join(recordingRoot, new Date().toISOString().replaceAll(/[:.]/g, "-"));
 const web = process.env.DEMO_WEB_URL ?? "http://127.0.0.1:3000";
 const api = process.env.DEMO_API_URL ?? "http://127.0.0.1:8000";
-const post = async (route, body) => {
-  const response = await fetch(`${api}${route}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!response.ok) throw new Error(`${route}: ${response.status}`);
-  return response.json();
-};
-const existing = await (await fetch(`${api}/api/repositories`)).json();
-const repo = existing.items.find((item) => item.name === "Click") ?? await post("/api/repositories", { name: "Click", source_type: "local", root_path: folder });
-await post(`/api/repositories/${repo.id}/index`, {});
+const meta = await (await fetch(api + "/api/meta")).json();
+if (meta.model_configured) throw new Error("Record with npm run demo, which disables the model key.");
+const repo = await indexExample(api, folder);
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+const viewport = { width: 960, height: 640 };
+const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
 const network = [];
-page.on("response", (response) => { if (response.url().includes("/api/")) network.push({ url: response.url().replace(api, ""), status: response.status() }); });
+const verification = [];
+const frames = [];
+let capturing = false;
+let recording;
+page.on("request", (request) => {
+  if (request.url().startsWith(api + "/api/")) network.push({ path: new URL(request.url()).pathname, method: request.method() });
+});
 mkdirSync(output, { recursive: true });
+
+async function search(query) {
+  await page.getByRole("textbox", { name: "搜索代码" }).fill(query);
+  const response = page.waitForResponse((response) => response.url().endsWith("/api/tools/search")
+    && response.request().method() === "POST");
+  await page.getByRole("textbox", { name: "搜索代码" }).press("Enter");
+  return (await (await response).json()).items;
+}
+
+async function inspect(items, filename, line, query) {
+  const item = items.find((item) => item.path === filename && item.start_line <= line && item.end_line >= line);
+  if (!item) throw new Error("Expected source not in search results: " + filename + ":" + line);
+  await page.locator(".search-result").filter({ hasText: filename + ":" + item.start_line }).first().click();
+  await expect(page.locator(".source-path")).toHaveText(filename);
+  await expect(page.locator(".source-line").first()).toBeVisible();
+  const start = Number(await page.locator(".line-number").first().textContent());
+  const displayed = await page.locator(".source-line code").allTextContents();
+  const bytes = readFileSync(path.join(folder, filename));
+  const expected = bytes.toString("utf8").split(/\r?\n/).slice(start - 1, start - 1 + displayed.length).map((text) => text || " ");
+  expect(displayed).toEqual(expected);
+  expect(displayed.length).toBeLessThanOrEqual(200);
+  await focusLine(line);
+  verification.push({ query, path: filename, start_line: start, end_line: start + displayed.length - 1,
+    focus_line: line, displayed_lines_match_checkout: true, source_sha256: createHash("sha256").update(bytes).digest("hex") });
+}
+
+async function focusLine(line) {
+  await page.locator(".source-code").evaluate((panel, line) => {
+    const row = Array.from(panel.querySelectorAll(".source-line")).find((node) => Number(node.querySelector(".line-number").textContent) === line);
+    if (!row) throw new Error("Line is outside current source page.");
+    panel.scrollTop += row.getBoundingClientRect().top - panel.getBoundingClientRect().top - 70;
+  }, line);
+}
+
 try {
   await page.goto(web);
   await page.getByLabel("当前仓库").selectOption(String(repo.id));
-  await page.getByRole("button", { name: "符号", exact: true }).click();
   await expect(page.locator(".repository-status")).toHaveText("可用");
   await page.getByRole("button", { name: "src", exact: true }).click();
   await page.getByRole("button", { name: "click", exact: true }).click();
+  await inspect(await search("callback=f"), "src/click/decorators.py", 248, "callback=f");
+  await page.getByRole("button", { name: "自动换行" }).click();
+  await focusLine(248);
+  await page.getByRole("textbox", { name: "搜索代码" }).clear();
+  await page.screenshot({ path: path.join(output, "poster.png") });
 
   const started = Date.now();
-  const frames = [];
-  const recording = (async () => {
-    while (Date.now() - started < 26_000) {
-      const filename = `${String(frames.length).padStart(4, "0")}.png`;
+  capturing = true;
+  recording = (async () => {
+    while (capturing && Date.now() - started < 28_000) {
+      const filename = String(frames.length).padStart(4, "0") + ".png";
       frames.push({ file: filename, elapsed_ms: Date.now() - started });
       await page.screenshot({ path: path.join(output, filename) });
-      await new Promise((resolve) => setTimeout(resolve, 180));
+      await page.waitForTimeout(180);
     }
   })();
-  const at = async (seconds) => { await new Promise((resolve) => setTimeout(resolve, Math.max(0, seconds * 1000 - (Date.now() - started)))); };
-  await at(2);
-  await page.getByRole("textbox", { name: "搜索代码" }).pressSequentially("Command", { delay: 160 });
-  await at(5);
-  await page.getByRole("button", { name: "搜索", exact: true }).click();
-  const result = page.locator(".search-result").filter({ hasText: "src/click/core.py" }).first();
-  await expect(result).toBeVisible();
-  await at(8);
-  await result.click();
-  await expect(page.getByRole("region", { name: "文件内容" })).toContainText("class Command");
-  const firstLine = Number(await page.locator(".line-number").first().textContent());
-  const actualLines = await page.locator(".source-line code").allTextContents();
-  const expectedLines = readFileSync(path.join(folder, "src/click/core.py"), "utf8").split(/\r?\n/).slice(firstLine - 1, firstLine + 199).map((line) => line || " ");
-  expect(actualLines).toEqual(expectedLines);
-  await at(13);
-  await page.getByRole("region", { name: "文件内容" }).hover();
-  await page.mouse.wheel(0, 270);
+  const at = async (seconds) => page.waitForTimeout(Math.max(0, seconds * 1000 - (Date.now() - started)));
+  await at(1);
+  let items = await search("callback=f");
+  await at(4);
+  await inspect(items, "src/click/decorators.py", 248, "callback=f");
+  await at(9);
+  items = await search("self.callback = callback");
+  await at(12);
+  await inspect(items, "src/click/core.py", 1090, "self.callback = callback");
   await at(17);
-  await page.getByRole("button", { name: "下一段", exact: true }).click();
-  await at(20);
-  await page.getByRole("button", { name: "上一段", exact: true }).click();
-  await at(23);
-  await page.getByRole("region", { name: "文件内容" }).evaluate((element) => { element.scrollTop = 0; });
+  items = await search("ctx.invoke(self.callback");
+  await at(21);
+  await inspect(items, "src/click/core.py", 1442, "ctx.invoke(self.callback");
   await recording;
+  const duration = Date.now() - started;
   await expect(page.locator("header h1")).toBeInViewport();
-  await page.screenshot({ path: path.join(root, "docs/assets/codeatlas-reading.png") });
-  const source = readFileSync(path.join(folder, "src/click/core.py"));
-  writeFileSync(path.join(output, "recording.json"), JSON.stringify({
-    recorded_at: new Date().toISOString(), repository: "pallets/click", commit, model_calls: 0,
-    viewport: { width: 1280, height: 800 }, duration_ms: Date.now() - started,
-    source_sha256: createHash("sha256").update(source).digest("hex"),
-    verification: { path: "src/click/core.py", start_line: firstLine, end_line: firstLine + actualLines.length - 1, displayed_lines_match_checkout: true },
-    frames, network,
-  }, null, 2));
-  console.log(`Recorded ${frames.length} real browser frames; no mocked requests or model calls.`);
-} finally { await browser.close(); }
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  const mobileViewport = { width: 390, height: 720 };
+  await page.setViewportSize(mobileViewport);
+  await focusLine(1442);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(await page.locator(".source-code").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+  await page.locator(".reader-panel").screenshot({ path: path.join(output, "mobile.png") });
+  const modelCalls = network.filter((item) => /\/api\/(chat\/ask|patches\/draft)/.test(item.path)).length;
+  expect(modelCalls).toBe(0);
+  const receipt = {
+    recorded_at: new Date().toISOString(), repository: "pallets/click", commit: clickExample.commit,
+    viewport, mobile_viewport: mobileViewport, duration_ms: duration, model_calls: modelCalls,
+    mocked_responses: false, speed: "original", initial_state: "Click indexed; decorator source already open",
+    verification, frames, network,
+  };
+  writeFileSync(path.join(output, "recording.json"), JSON.stringify(receipt, null, 2));
+  writeFileSync(path.join(recordingRoot, "latest.json"), JSON.stringify({ directory: path.basename(output) }));
+  copyFileSync(path.join(output, "poster.png"), path.join(root, "docs/assets/codeatlas-reading.png"));
+  copyFileSync(path.join(output, "mobile.png"), path.join(root, "docs/assets/codeatlas-reading-mobile.png"));
+  console.log("Recorded " + frames.length + " real frames; three source locations verified, no model calls.");
+} catch (error) {
+  writeFileSync(path.join(output, "failure.json"), JSON.stringify({ error: String(error), verification, network }, null, 2));
+  throw error;
+} finally {
+  capturing = false;
+  await recording?.catch(() => {});
+  await browser.close();
+}

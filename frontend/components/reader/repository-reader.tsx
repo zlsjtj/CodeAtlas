@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronRight, FileCode2, Folder, RefreshCw, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronRight, FileCode2, Folder, RefreshCw, Search, WrapText } from "lucide-react";
 import type { SourceTarget, useRepositoryReader } from "@/lib/hooks/use-repository-reader";
 import type { WorkspaceLocale } from "@/lib/workspace-i18n";
 
@@ -39,6 +39,7 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
   const en = locale === "en";
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"search" | "find-symbol">("search");
+  const [wrapLines, setWrapLines] = useState(false);
   const source = reader.source;
   const start = source?.start_line ?? 1;
   const end = source?.end_line ?? 0;
@@ -69,6 +70,8 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
       <span className="source-path">{reader.sourceTarget?.path ?? (en ? "Source" : "源码")}</span>
       {source ? <div className="source-pagination">
         <span className="muted">{start}–{end}</span>
+        <button className="icon-button" aria-pressed={wrapLines} title={en ? "Wrap lines" : "自动换行"} aria-label={en ? "Wrap lines" : "自动换行"}
+          onClick={() => setWrapLines(!wrapLines)}><WrapText size={16} /></button>
         <button className="icon-button" disabled={start <= 1 || reader.reading} title={en ? "Previous lines" : "上一段"} aria-label={en ? "Previous lines" : "上一段"}
           onClick={() => void reader.openSource({ path: source.path, line: Math.max(1, start - 200) })}><ArrowLeft size={16} /></button>
         <button className="icon-button" disabled={end - start + 1 < 200 || reader.reading} title={en ? "Next lines" : "下一段"} aria-label={en ? "Next lines" : "下一段"}
@@ -80,7 +83,7 @@ export function RepositoryReader({ reader, locale, indexed }: { reader: Reader; 
       <button className="icon-button" title={en ? "Retry reading" : "重新读取"} aria-label={en ? "Retry reading" : "重新读取"}
         onClick={() => reader.sourceTarget && void reader.openSource(reader.sourceTarget)}><RefreshCw size={16} /></button></div> : null}
     {reader.reading ? <p role="status" className="empty-state">{en ? "Reading file..." : "正在读取文件…"}</p> : null}
-    {source ? <div className="source-code" tabIndex={0} role="region" aria-label={en ? "File contents" : "文件内容"}>
+    {source ? <div className={`source-code ${wrapLines ? "wrap-lines" : ""}`} tabIndex={0} role="region" aria-label={en ? "File contents" : "文件内容"}>
       <pre>{(source.content ?? "").split("\n").map((line, index) => <span className={`source-line ${start + index <= (reader.sourceTarget?.endLine ?? start) ? "target-line" : ""}`} key={start + index}>
         <span className="line-number" aria-hidden="true">{start + index}</span><code>{line || " "}</code>
       </span>)}</pre>

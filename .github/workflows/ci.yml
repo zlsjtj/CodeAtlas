@@ -39,6 +39,8 @@ jobs:
           fi
       - name: Native startup and no-key search
         run: npm run smoke
+      - name: Pinned Click example and repeat import
+        run: npm run demo -- --smoke
       - name: Generated API types
         if: runner.os == 'Linux'
         working-directory: frontend

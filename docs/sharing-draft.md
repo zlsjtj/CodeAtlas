@@ -6,7 +6,7 @@
 
 CodeAtlas 是一个本地代码阅读工作台：导入仓库后，可以搜索函数或关键词，点击结果核对带行号的源码，不需要模型 Key。配置模型后可围绕代码提问，引用也能打开文件查看；修改代码仍需先预览 diff 再明确应用。
 
-演示用固定版本的 Click，展示从 `Command` 搜索结果跳到定义并阅读上下文。当前是关键词和正则符号检索，没有语义索引，也不是执行沙箱。真实模型问答还没有完成验收。试用时最有帮助的反馈是：哪个仓库、什么符号或问题、预期定位到哪里、实际发生了什么。
+演示用固定版本的 Click，沿着三次搜索查看装饰器如何保存并调用原函数。安装依赖后运行 `npm run demo` 即可复现，不用先配置模型。当前使用关键词和正则符号检索；模型问答还没有完成真实案例验收。欢迎反馈具体仓库中找不到的代码，或启动时遇到的问题。
 
 项目：https://github.com/zlsjtj/CodeAtlas
 
@@ -14,13 +14,13 @@ CodeAtlas 是一个本地代码阅读工作台：导入仓库后，可以搜索�
 
 CodeAtlas is a local code-reading workspace. Import a repository, search for a symbol or keyword, and open numbered source lines without a model key. With a model configured, you can ask questions and inspect the referenced files. Changes still require a diff preview and an explicit apply step.
 
-The demo uses a pinned Click checkout to find the `Command` definition and read its context. Retrieval is keyword- and regex-based, not semantic search, and the app is not an execution sandbox. Real-model Q&A has not yet been accepted. Useful feedback includes the repository, query, expected location and actual result.
+The demo follows three searches through a pinned Click checkout to see how a decorator stores and invokes the original function. After setup, run `npm run demo` to reproduce it without configuring a model. Retrieval is keyword- and regex-based. Real-model Q&A is not yet validated against the fixed cases. Reports of startup problems or code that a query fails to locate are especially useful.
 
 Project: https://github.com/zlsjtj/CodeAtlas
 
 ## GitHub About 建议
 
-Local code-reading workspace: search symbols, inspect source lines, and check LLM references. No key needed for search.
+A local workspace for exploring codebases, searching symbols, and checking source references.
 
 Topics 可保留 `code-search`、`developer-tools`、`repository-analysis`、`nextjs`、`fastapi`。About 和 topics 不在 Git 文件中，这份草稿不表示远端设置已经修改。
 

@@ -8,7 +8,7 @@ const api = "http://127.0.0.1:8100";
 function fixture(name: string) {
   const root = path.resolve("test-results", `repo-${name}`);
   mkdirSync(root, { recursive: true });
-  writeFileSync(path.join(root, "main.py"), "def greet(name):\n    return f'Hello {name}'\n" + Array.from({ length: 410 }, (_, n) => `# line ${n + 3}`).join("\n") + "\n");
+  writeFileSync(path.join(root, "main.py"), "def greet(name):\n    return f'Hello {name}'\n" + Array.from({ length: 410 }, (_, n) => `# line ${n + 3}${n === 207 ? " long_code_without_spaces".repeat(20) : ""}`).join("\n") + "\n");
   writeFileSync(path.join(root, ".env"), "TOKEN=must-not-appear");
   writeFileSync(path.join(root, ".gitignore"), "ignored.py\n");
   writeFileSync(path.join(root, "ignored.py"), "secret_marker = True\n");
@@ -36,7 +36,11 @@ async function importAndIndex(page: Page, name: string) {
 
 test("no-key import, indexing, symbol lookup, source pages and existing views", async ({ page }) => {
   await importAndIndex(page, "reading");
+  await expect(page.locator(".question-sidebar")).toHaveCount(0);
+  await page.getByRole("button", { name: "展开问答栏" }).click();
   await expect(page.getByRole("button", { name: "提问", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "收起问答栏" }).click();
+  await expect(page.locator(".reading-layout")).toHaveClass(/reader-wide/);
   await expect(page.locator(".file-tree")).not.toContainText(".env");
   await expect(page.locator(".file-tree")).not.toContainText("ignored.py");
   await page.getByRole("button", { name: "符号", exact: true }).click();
@@ -44,15 +48,28 @@ test("no-key import, indexing, symbol lookup, source pages and existing views", 
   await page.getByRole("button", { name: "搜索", exact: true }).click();
   await page.locator(".search-result").filter({ hasText: "main.py" }).click();
   await expect(page.getByRole("region", { name: "文件内容" })).toContainText("def greet(name)");
+  await page.getByRole("button", { name: "展开问答栏" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "提问", exact: true })).toBeDisabled();
+  await expect(page.getByRole("region", { name: "文件内容" })).toContainText("def greet(name)");
+  await page.getByRole("button", { name: "收起问答栏" }).click();
   await page.getByRole("button", { name: "下一段" }).click();
   await expect(page.locator(".line-number").first()).toHaveText("201");
   await expect(page.locator("header h1")).toBeInViewport();
+  const source = page.getByRole("region", { name: "文件内容" });
+  expect(await source.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
+  await page.getByRole("button", { name: "自动换行" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "自动换行" })).toHaveAttribute("aria-pressed", "true");
+  expect(await source.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
   await page.getByRole("button", { name: "上一段" }).click();
   await expect(page.locator(".line-number").first()).toHaveText("1");
   await page.getByRole("textbox", { name: "搜索代码" }).fill("no_such_symbol");
   await page.getByRole("button", { name: "搜索", exact: true }).click();
   await expect(page.getByText("没有匹配结果。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "问答", exact: true }).click();
+  await expect(page.getByRole("button", { name: "提问", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "改动", exact: true }).click();
   await expect(page.locator(".full-panel")).toContainText("草案");
   await page.getByRole("button", { name: "检查", exact: true }).click();
@@ -127,6 +144,12 @@ test("mobile reading, language switch and keyboard focus do not overflow", async
   await expect(page.getByRole("button", { name: "Next lines" })).toBeFocused();
   await page.getByRole("button", { name: "Next lines" }).press("Enter");
   await expect(page.locator(".line-number").first()).toHaveText("201");
+  const source = page.getByRole("region", { name: "File contents" });
+  expect(await source.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
+  await page.getByRole("button", { name: "Wrap lines" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Wrap lines" })).toHaveAttribute("aria-pressed", "true");
+  expect(await source.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   await expect(page.locator("header h1")).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/mobile-reading.png", fullPage: true });

@@ -1,23 +1,25 @@
-# 阅读 Click 的 Command 定义
+# 从 Click 装饰器读到回调执行
 
-这次案例只验证“定位源码并读上下文”，不评价模型解释质量。
+问题是：`@click.command()` 怎样把一个普通函数变成命令？这次不用模型，沿着搜索结果阅读两个文件。
 
 ## 固定输入
 
-- CodeAtlas 阅读界面来自 `301caa6`，启动与测试来自 `8d785b8`；录屏前另修正了长目录的独立滚动。
+- CodeAtlas 使用本次阅读体验改进后的界面：问答栏可收起，源码可自动换行。
 - Click：[`06b2a678741131fd577ce170e23e5ca0aeba0309`](https://github.com/pallets/click/tree/06b2a678741131fd577ce170e23e5ca0aeba0309)。
-- Windows，Chromium，1280 × 800；界面语言中文。未配置模型 Key。
+- Windows，Chromium，桌面 960 × 640，手机 390 × 720；界面语言中文。使用 `npm run demo`，未调用模型。
 
 ## 操作与结果
 
-1. 将 Click 导入并索引，展开 `src/click`。
-2. 在“符号”模式输入 `Command`，执行搜索。
-3. 点击 `src/click/core.py:985`，显示第 985–1184 行。第一行是 `class Command:`。
-4. 滚动查看上下文，再向后翻一段并返回。每次读取不超过 200 行。
+1. `npm run demo` 准备固定提交、导入并索引 Click。打开打印的地址，展开 `src/click`。
+2. 关键词搜索 `callback=f`。在 `decorators.py:248`，`cls(...)` 以原函数 `f` 作为 callback 创建命令，再返回命令对象。
+3. 搜索 `self.callback = callback`。在 `core.py:1090`，`Command` 将 callback 保存到实例。这里也有其他匹配，注意核对类和文件上下文。
+4. 搜索 `ctx.invoke(self.callback`。在 `core.py:1442`，命令执行时用解析后的 `ctx.params` 调用 callback。
 
-录制脚本将屏幕中的 200 行文本与固定 checkout 逐行比较，一致后才写出证据。这个断言不验证 Click 的功能，也不证明任意符号都能被正确定位。搜索为大小写不敏感的正则匹配，本例也返回了同名装饰器等候选。
+这三处代码解释的是“原函数如何被保存并最终调用”，不覆盖完整参数解析、异常处理或命令组流程。工具提供关键词匹配和源码，没有自动分析调用关系。
 
-[GIF](assets/codeatlas-reading.gif) 为 26 秒原速截图序列，没有加速、剪辑或模型响应。它从已经导入、索引的仓库开始，安装和索引不在录像内。[静态画面](assets/codeatlas-reading.png)与[机器可读记录](evidence/reading-demo.json)一并保留。Click 画面中的源码使用 BSD-3-Clause，见[许可说明](../THIRD_PARTY_NOTICES.md)。
+录制脚本将每次打开的源码与固定 checkout 逐行比较，检查单次不超过 200 行，再记录文件哈希及行范围。[GIF](assets/codeatlas-reading.gif) 是约 28 秒的原速截图序列，没有加速、剪辑或模型响应。它从已经导入、索引并打开装饰器源码的工作台开始，不包含安装和下载。
+
+[桌面静态画面](assets/codeatlas-reading.png)、[手机阅读栏截图](assets/codeatlas-reading-mobile.png)与[机器可读记录](evidence/reading-demo.json)一并保留。手机图来自实际窄屏布局，不是缩小的桌面图；首页对手机和减少动态效果偏好使用静态图。Click 源码使用 BSD-3-Clause，见[许可说明](../THIRD_PARTY_NOTICES.md)。
 
 ## 尚未验收的部分
 
@@ -27,4 +29,6 @@ CodeAtlas 和 Click 各三道问题已在[清单](../benchmarks/reading-cases.js
 
 ## 录制中发现的问题
 
-第一次实录时，Click 长目录和搜索结果撑高了整个页面，点击翻页后顶部工具栏离开了视口。改为目录、源码和问答区分别滚动，再重新录制；脚本额外断言录制结束时 CodeAtlas 标题仍在视口内。这是界面问题的重录，不涉及问答重试。
+前一次实录曾发现长目录撑高页面，已经改为各栏独立滚动。本次查看 GitHub 页面时又发现：桌面三栏图缩到手机约 324 像素后，源码难以阅读。
+
+因此增加了问答栏开关和源码自动换行，并重新录制更窄的桌面画面、单独截取手机阅读栏。浏览器回归覆盖开关的键盘操作、关闭后源码保留、长行换行和原有问答/草案/检查入口。

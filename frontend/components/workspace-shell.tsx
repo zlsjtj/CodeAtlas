@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, FilePenLine, ListChecks, Menu, MessageSquare, Plus, X } from "lucide-react";
+import { BookOpen, FilePenLine, ListChecks, Menu, MessageSquare, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
 import { ChecksPanel } from "@/components/checks/checks-panel";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { ChatHistoryPanel } from "@/components/chat/chat-history-panel";
@@ -86,6 +86,8 @@ function RepositorySession({ repository, locale, modelConfigured, repositories, 
   const en = locale === "en";
   const [view, setView] = useState<View>("read");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [questionSidebar, setQuestionSidebar] = useState<boolean | null>(null);
+  const showQuestions = questionSidebar ?? modelConfigured;
   useEffect(() => {
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSidebarOpen(false); };
     window.addEventListener("keydown", close);
@@ -113,10 +115,14 @@ function RepositorySession({ repository, locale, modelConfigured, repositories, 
         onClick={() => setSidebarOpen(!sidebarOpen)}><Menu size={18} /></button>
       {tabs.map(({ id, label, icon: Icon }) => <button key={id} className={`workspace-tab ${view === id ? "active" : ""}`} aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}><Icon size={16} />{label}</button>)}
       <span className="repository-status">{formatRepositoryStatus(locale, repository.status)}</span>
+      {view === "read" ? <button className="icon-button question-toggle" aria-expanded={showQuestions}
+        aria-label={showQuestions ? (en ? "Hide questions" : "收起问答栏") : (en ? "Show questions" : "展开问答栏")}
+        title={showQuestions ? (en ? "Hide questions" : "收起问答栏") : (en ? "Show questions" : "展开问答栏")}
+        onClick={() => setQuestionSidebar(!showQuestions)}>{showQuestions ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}</button> : null}
       <button className="button-secondary index-button" disabled={!repository.root_path || Boolean(repositories.indexingRepoId || repositories.importingRepoId)}
         onClick={() => void repositories.handleIndexRepository(repository.id)}>{repository.status === "ready" ? (en ? "Reindex" : "重新索引") : (en ? "Index repository" : "开始索引")}</button>
     </nav>
-    <div className={`reading-layout view-${view}`}>
+    <div className={`reading-layout view-${view} ${showQuestions ? "" : "reader-wide"}`}>
       {sidebarOpen ? <button className="drawer-backdrop" aria-label={en ? "Close files" : "关闭文件栏"} onClick={() => setSidebarOpen(false)} /> : null}
       <aside className={`file-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-context"><strong>{repository.name}</strong><span className="muted">{repository.primary_language ?? repository.source_type}</span></div>
@@ -126,7 +132,7 @@ function RepositorySession({ repository, locale, modelConfigured, repositories, 
         {chat.chatHistory.length ? <details className="sidebar-details"><summary>{en ? "Questions" : "历史提问"}</summary><ChatHistoryPanel activeSessionId={chat.chatResponse?.session_id ?? null}
           entries={chat.chatHistory} locale={locale} onSelectSession={chat.handleSelectHistory} /></details> : null}
       </aside>
-      {view === "read" ? <><RepositoryReader reader={reader} locale={locale} indexed={repository.status === "ready"} /><aside className="question-sidebar">{questionPanel}</aside></> : null}
+      {view === "read" ? <><RepositoryReader reader={reader} locale={locale} indexed={repository.status === "ready"} />{showQuestions ? <aside className="question-sidebar">{questionPanel}</aside> : null}</> : null}
       {view === "chat" ? <div className="full-panel chat-view">{questionPanel}</div> : null}
       {view === "patch" ? <div className="full-panel"><PatchDraftPanel modelConfigured={modelConfigured} applyResponse={changes.patchApplyResponse} batchApplyResponse={changes.patchBatchApplyResponse}
         batchResponse={changes.patchBatchResponse} isApplying={changes.isApplyingPatch} isApplyingAndChecking={changes.isApplyingAndChecking} isApplyingBatch={changes.isApplyingBatchPatch}

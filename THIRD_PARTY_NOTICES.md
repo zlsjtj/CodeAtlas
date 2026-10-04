@@ -9,7 +9,7 @@ package.
 
 ## Click Demo
 
-`docs/assets/codeatlas-reading.gif` and `.png` show source from
+`docs/assets/codeatlas-reading.gif`, `.png`, and `codeatlas-reading-mobile.png` show source from
 [pallets/click](https://github.com/pallets/click/tree/06b2a678741131fd577ce170e23e5ca0aeba0309),
 commit `06b2a678741131fd577ce170e23e5ca0aeba0309`. This is an independent
 reading example, not an endorsement by Pallets. The checkout is not vendored.

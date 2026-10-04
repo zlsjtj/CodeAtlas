@@ -1,19 +1,58 @@
 {
-  "recorded_at": "2026-10-04T08:12:29.736Z",
+  "recorded_at": "2026-10-04T09:12:26.949Z",
   "repository": "pallets/click",
   "commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
-  "viewport": {"width": 1280, "height": 800},
-  "duration_ms": 26226,
-  "captured_frames": 104,
+  "viewport": {
+    "width": 960,
+    "height": 640
+  },
+  "mobile_viewport": {
+    "width": 390,
+    "height": 720
+  },
+  "duration_ms": 28151,
   "model_calls": 0,
   "mocked_responses": false,
   "speed": "original",
-  "source_sha256_windows_checkout": "31e18146040f94fac5dc491affafde7004c7d06a4fa09a07a9ddaa86b555ef38",
-  "verification": {
-    "path": "src/click/core.py",
-    "start_line": 985,
-    "end_line": 1184,
-    "displayed_lines_match_checkout": true,
-    "scope": "UI source fidelity, not model answer correctness"
-  }
+  "initial_state": "Click indexed; decorator source already open",
+  "verification": [
+    {
+      "query": "callback=f",
+      "path": "src/click/decorators.py",
+      "start_line": 181,
+      "end_line": 380,
+      "focus_line": 248,
+      "displayed_lines_match_checkout": true,
+      "source_sha256": "16069357615691fcdfc9c794bb515f6009eb35aad6f7a76c017bdce06dae8d55"
+    },
+    {
+      "query": "callback=f",
+      "path": "src/click/decorators.py",
+      "start_line": 181,
+      "end_line": 380,
+      "focus_line": 248,
+      "displayed_lines_match_checkout": true,
+      "source_sha256": "16069357615691fcdfc9c794bb515f6009eb35aad6f7a76c017bdce06dae8d55"
+    },
+    {
+      "query": "self.callback = callback",
+      "path": "src/click/core.py",
+      "start_line": 1021,
+      "end_line": 1220,
+      "focus_line": 1090,
+      "displayed_lines_match_checkout": true,
+      "source_sha256": "53df54afb5deba7fd7c3a968a2a6284fc2d9dd3892e6939dfbb3092ca3fbca0f"
+    },
+    {
+      "query": "ctx.invoke(self.callback",
+      "path": "src/click/core.py",
+      "start_line": 1381,
+      "end_line": 1580,
+      "focus_line": 1442,
+      "displayed_lines_match_checkout": true,
+      "source_sha256": "53df54afb5deba7fd7c3a968a2a6284fc2d9dd3892e6939dfbb3092ca3fbca0f"
+    }
+  ],
+  "captured_frames": 127,
+  "gif_duration_ms": 27440
 }
